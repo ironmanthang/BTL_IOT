@@ -8,6 +8,7 @@
 #include <ArduinoJson.h>
 #include <ElegantOTA.h>
 #include <task_handler.h>
+#include "global.h"  // for SensorData_t and sensorData_read()
 
 extern AsyncWebServer server;
 extern AsyncWebSocket ws;

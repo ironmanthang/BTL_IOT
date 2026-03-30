@@ -52,10 +52,16 @@ void tiny_ml_task(void *pvParameters)
     while (1)
     {
 
-        // Prepare input data (e.g., sensor readings)
-        // For a simple example, let's assume a single float input
-        input->data.f[0] = glob_temperature;
-        input->data.f[1] = glob_humidity;
+        // Read sensor data via mutex-protected accessor (Task 3 integration)
+        SensorData_t sensorData;
+        if (!sensorData_read(&sensorData)) {
+            Serial.println("[TinyML] WARNING: Could not read sensor data, skipping inference.");
+            vTaskDelay(1000);
+            continue;
+        }
+        // Prepare input data from shared sensor struct
+        input->data.f[0] = sensorData.temperature;
+        input->data.f[1] = sensorData.humidity;
 
         // Run inference
         TfLiteStatus invoke_status = interpreter->Invoke();

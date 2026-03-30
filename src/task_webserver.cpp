@@ -1,10 +1,35 @@
 #include "task_webserver.h"
 
+// ---------------------------------------------------------------------------
+// Task 4 — Web Server in Access Point Mode
+//
+// Architecture:
+//   - ESPAsyncWebServer on port 80 (non-blocking, runs on its own internal task)
+//   - AsyncWebSocket at endpoint "/ws" for real-time bidirectional communication
+//   - LittleFS serves static frontend files (index.html, script.js, styles.css)
+//   - ElegantOTA enables over-the-air firmware updates via HTTP
+//
+// Sensor data flow (Task 3 integration):
+//   temp_humi_monitor  →  sensorData_write()  →  [mutex]  →  sharedSensorData
+//   Webserver_reconnect  →  sensorData_read()  →  JSON  →  WebSocket broadcast
+//
+// WebSocket JSON protocol:
+//   Server → Client (push, every 3s): {"temp": 26.8, "hum": 55.5}
+//   Client → Server (command):        {"page":"device", "led1":"ON", ...}
+// ---------------------------------------------------------------------------
+
 AsyncWebServer server(80);
 AsyncWebSocket ws("/ws");
 
+// Tracks whether the HTTP server has been started at least once.
+// Used by Webserver_reconnect() to avoid re-initializing on every loop() call.
 bool webserver_isrunning = false;
 
+// ---------------------------------------------------------------------------
+// Webserver_sendata — Broadcast a text payload to ALL currently connected
+// WebSocket clients. Silently skips if no clients are connected.
+// Called once per broadcast cycle with the JSON sensor payload.
+// ---------------------------------------------------------------------------
 void Webserver_sendata(String data)
 {
     if (ws.count() > 0)
@@ -18,6 +43,15 @@ void Webserver_sendata(String data)
     }
 }
 
+// ---------------------------------------------------------------------------
+// onEvent — WebSocket event callback registered with the AsyncWebSocket handler.
+//
+// Handles three event types:
+//   WS_EVT_CONNECT    — logs new client connection (id + remote IP)
+//   WS_EVT_DISCONNECT — logs client disconnection
+//   WS_EVT_DATA       — receives text frame and forwards to handleWebSocketMessage()
+//                       for JSON command parsing (device control, settings, etc.)
+// ---------------------------------------------------------------------------
 void onEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType type, void *arg, uint8_t *data, size_t len)
 {
     if (type == WS_EVT_CONNECT)
@@ -34,41 +68,91 @@ void onEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType 
 
         if (info->opcode == WS_TEXT)
         {
+            // Extract the text payload from the raw byte buffer
             String message;
             message += String((char *)data).substring(0, len);
-            // parseJson(message, true);
+            // Route the command to the appropriate handler (GPIO control, Wi-Fi settings, etc.)
             handleWebSocketMessage(message);
         }
     }
 }
 
+// ---------------------------------------------------------------------------
+// connnectWSV — Initialize and start the AsyncWebServer.
+// Called once when the server needs to be started (or restarted after stop).
+//
+// Registers:
+//   - WebSocket handler at "/ws"
+//   - Static file routes: "/" → index.html, "/script.js", "/styles.css"
+//   - ElegantOTA handler for OTA firmware updates
+// ---------------------------------------------------------------------------
 void connnectWSV()
 {
     ws.onEvent(onEvent);
     server.addHandler(&ws);
+
+    // Serve frontend files from LittleFS flash filesystem
     server.on("/", HTTP_GET, [](AsyncWebServerRequest *request)
               { request->send(LittleFS, "/index.html", "text/html"); });
     server.on("/script.js", HTTP_GET, [](AsyncWebServerRequest *request)
               { request->send(LittleFS, "/script.js", "application/javascript"); });
     server.on("/styles.css", HTTP_GET, [](AsyncWebServerRequest *request)
               { request->send(LittleFS, "/styles.css", "text/css"); });
+
     server.begin();
-    ElegantOTA.begin(&server);
+    ElegantOTA.begin(&server);  // Enable OTA update page at /update
     webserver_isrunning = true;
 }
 
+// ---------------------------------------------------------------------------
+// Webserver_stop — Gracefully shut down the WebSocket and HTTP server.
+// Called when Wi-Fi connection is lost and needs to be re-established.
+// ---------------------------------------------------------------------------
 void Webserver_stop()
 {
-    ws.closeAll();
+    ws.closeAll();   // Disconnect all WebSocket clients cleanly
     server.end();
     webserver_isrunning = false;
 }
 
+// Timestamp of the last sensor broadcast (milliseconds since boot)
+unsigned long last_broadcast = 0;
+
+// ---------------------------------------------------------------------------
+// Webserver_reconnect — Called from loop() on every iteration.
+//
+// Responsibilities:
+//   1. Starts the server if it is not yet running (lazy init / auto-restart)
+//   2. Keeps ElegantOTA processing loop alive (required for OTA to work)
+//   3. Broadcasts latest sensor data (temp + humidity) to all WebSocket clients
+//      every 3 seconds, reading from the mutex-protected shared struct defined
+//      in global.cpp (Task 3). Skips broadcast if sensorData_read() fails
+//      (mutex timeout) to avoid sending stale or zeroed data to clients.
+// ---------------------------------------------------------------------------
 void Webserver_reconnect()
 {
     if (!webserver_isrunning)
     {
         connnectWSV();
     }
-    ElegantOTA.loop();
+    ElegantOTA.loop();  // Must be called regularly for OTA to function
+
+    // Broadcast sensor data to ALL connected clients every 3 seconds
+    if (millis() - last_broadcast > 3000) {
+        last_broadcast = millis();
+        if (webserver_isrunning && ws.count() > 0) {
+            // Read sensor data via mutex-protected accessor (Task 3 integration).
+            // sensorData_read() acquires xMutexSensorData with a 100ms timeout,
+            // copies the shared SensorData_t struct, then releases the mutex.
+            SensorData_t data;
+            if (sensorData_read(&data)) {
+                String payload = "{\"temp\":" + String(data.temperature)
+                               + ",\"hum\":"  + String(data.humidity) + "}";
+                Webserver_sendata(payload);
+            } else {
+                Serial.println("[Webserver] WARNING: Could not read sensor data for broadcast.");
+            }
+        }
+    }
 }
+
