@@ -6,6 +6,7 @@ window.addEventListener('load', onLoad);
 
 function onLoad(event) {
     initWebSocket();
+    renderRelays();
 }
 
 function onOpen(event) {
@@ -52,7 +53,10 @@ function onMessage(event) {
 
 
 // ==================== UI NAVIGATION ====================
-let relayList = [];
+let relayList = [
+    { id: 1, name: "LED 1 (Built-in)", gpio: 48, state: false },
+    { id: 2, name: "LED 2 (NeoPixel/Ext)", gpio: 18, state: false }
+];
 let deleteTarget = null;
 
 function showSection(id, event) {

@@ -38,3 +38,4 @@ bool sensorData_read(SensorData_t *outData) {
     }
     return false;
 }
+
