@@ -5,6 +5,7 @@
 #include "temp_humi_monitor.h"
 #include "led_blinky.h"
 #include "neo_blinky.h"
+#include "tinyml.h"
 
 LiquidCrystal_I2C lcd(LCD_I2C_ADDR, LCD_COLS, LCD_ROWS);
 DHT20 dht;
@@ -23,11 +24,13 @@ void setup() {
     xMutexSensorData      = xSemaphoreCreateMutex();
     xSemaphoreStateChange = xSemaphoreCreateBinary();
     xSemaphoreNeoChange   = xSemaphoreCreateBinary();
+    xBinarySemaphoreInternet = xSemaphoreCreateBinary();
     
     // 4. Chạy Task
     xTaskCreate(temp_humi_monitor, "Task_Sensor", 4096, NULL, 3, NULL);
     xTaskCreate(led_blinky,        "Task_LED",    2048, NULL, 2, NULL);
     xTaskCreate(neo_blinky,        "Task_Neo",    2048, NULL, 2, NULL);
+    xTaskCreate(tiny_ml_task,      "Task_AI",     8192, NULL, 2, NULL);
 }
 
 void loop() {

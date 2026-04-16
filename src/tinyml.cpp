@@ -79,3 +79,51 @@ void tiny_ml_task(void *pvParameters)
         vTaskDelay(5000);
     }
 }
+
+
+
+// #include "tinyml.h"
+
+// namespace {
+//     tflite::ErrorReporter* error_reporter = nullptr;
+//     const tflite::Model* model = nullptr;
+//     tflite::MicroInterpreter* interpreter = nullptr;
+//     TfLiteTensor* input = nullptr;
+//     TfLiteTensor* output = nullptr;
+//     constexpr int kTensorArenaSize = 10 * 1024;
+//     uint8_t tensor_arena[kTensorArenaSize];
+// }
+
+// void setupTinyML() {
+//     static tflite::MicroErrorReporter micro_error_reporter;
+//     error_reporter = &micro_error_reporter;
+
+//     model = tflite::GetModel(dht_anomaly_model_tflite);
+//     if (model->version() != TFLITE_SCHEMA_VERSION) return;
+
+//     static tflite::AllOpsResolver resolver;
+//     static tflite::MicroInterpreter static_interpreter(model, resolver, tensor_arena, kTensorArenaSize, error_reporter);
+//     interpreter = &static_interpreter;
+
+//     interpreter->AllocateTensors();
+//     input = interpreter->input(0);
+//     output = interpreter->output(0);
+// }
+
+// void tiny_ml_task(void *pvParameters) {
+//     setupTinyML();
+//     SensorData_t sensorData;
+
+//     while (1) {
+//         if (sensorData_read(&sensorData)) {
+//             input->data.f[0] = sensorData.temperature;
+//             input->data.f[1] = sensorData.humidity;
+
+//             if (interpreter->Invoke() == kTfLiteOk) {
+//                 float result = output->data.f[0];
+//                 Serial.printf("Inference: %.2f\n", result);
+//             }
+//         }
+//         vTaskDelay(pdMS_TO_TICKS(5000));
+//     }
+// }
