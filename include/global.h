@@ -6,6 +6,10 @@
 #include "freertos/task.h"
 #include "freertos/semphr.h"
 #include <LiquidCrystal_I2C.h>
+#include <Adafruit_GFX.h>
+#include <Adafruit_SSD1306.h>
+#include "DHT20.h"
+#include <Adafruit_NeoPixel.h>
 
 // 1. Trạng thái hiển thị
 typedef enum {
@@ -20,10 +24,24 @@ typedef struct {
     DisplayState_t state;        
 } SensorData_t;
 
-extern SemaphoreHandle_t xMutexSensorData;
-extern SemaphoreHandle_t xSemaphoreStateChange; // Dành cho Task LED
-extern SemaphoreHandle_t xSemaphoreNeoChange;   // Dành cho Task NeoPixel
-extern SemaphoreHandle_t xBinarySemaphoreInternet; // Dành cho CoreIOT sau này
+// extern SemaphoreHandle_t xMutexSensorData;
+// extern SemaphoreHandle_t xSemaphoreStateChange; // Dành cho Task LED
+// extern SemaphoreHandle_t xSemaphoreNeoChange;   // Dành cho Task NeoPixel
+// extern SemaphoreHandle_t xBinarySemaphoreInternet; // Dành cho CoreIOT sau này
+
+typedef struct {
+    SemaphoreHandle_t xMutexSensorData;
+    SemaphoreHandle_t xSemaphoreStateChange; // Dành cho Task LED
+    SemaphoreHandle_t xSemaphoreNeoChange;   // Dành cho Task NeoPixel
+    SemaphoreHandle_t xBinarySemaphoreInternet; // Dành cho CoreIOT sau này
+    
+    Adafruit_SSD1306 * lcd;
+    DHT20 * dht ;
+    Adafruit_NeoPixel* pixels;
+
+    SensorData_t sensorData;
+
+} AppContext_t;
 
 extern String WIFI_SSID;
 extern String WIFI_PASS;

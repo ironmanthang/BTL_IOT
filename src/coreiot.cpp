@@ -1,133 +1,130 @@
 #include "coreiot.h"
+#include "global.h"
+#include <WiFiClient.h>
+#include <PubSubClient.h>
+#include <ArduinoJson.h>
 
-// ----------- CONFIGURE THESE! -----------
-const char* coreIOT_Server = "10.235.76.226";  
-const char* coreIOT_Token = "g7drm1amhd3dchr379xu";   // Device Access Token
-const int   mqttPort = 1883;
-// ----------------------------------------
+void coreiot_task(void *pvParameters) {
+    // 1. Mở hộp lấy tài nguyên
+    AppContext_t * act = (AppContext_t *)pvParameters;
 
-WiFiClient espClient;
-PubSubClient client(espClient);
+    // 2. Chờ kết nối WiFi (Lấy Semaphore 1 lần duy nhất lúc khởi động)
+    if (act->xBinarySemaphoreInternet != NULL) {
+        Serial.println("[CoreIoT] Đang chờ WiFi...");
+        xSemaphoreTake(act->xBinarySemaphoreInternet, portMAX_DELAY);
+        Serial.println("[CoreIoT] Đã có WiFi! Bắt đầu chạy MQTT.");
+    }
 
+    // 3. Khởi tạo Client mạng NGAY BÊN TRONG TASK (Không dùng Global)
+    WiFiClient espClient;
+    PubSubClient client(espClient);
 
-void reconnect() {
-  // Loop until we're reconnected
-  while (!client.connected()) {
-    Serial.print("Attempting MQTT connection...");
-    // Attempt to connect (username=token, password=empty)
-    //if (client.connect("ESP32Client", coreIOT_Token, NULL)) {
-    String clientId = "ESP32Client-";
-    clientId += String(random(0xffff), HEX);
+    // THÔNG SỐ SERVER (Bạn có thể đưa vào global.h nếu muốn, ở đây để nội bộ cho gọn)
+    const char* mqtt_server = "app.coreiot.io"; 
+    const char* mqtt_token  = "7113embizkufhmz4qcff"; 
+    const int   mqtt_port   = 1883;
 
-    if (client.connect(clientId.c_str())) {
+    client.setServer(mqtt_server, mqtt_port);
+
+    // =========================================================================
+    // 4. HÀM CALLBACK NHẬN LỆNH TỪ CLOUD (Dùng Lambda Function để bắt biến act)
+    // =========================================================================
+    client.setCallback([act](char* topic, byte* payload, unsigned int length) {
+        Serial.printf("Message arrived [%s]\n", topic);
         
-      Serial.println("connected to CoreIOT Server!");
-      client.subscribe("v1/devices/me/rpc/request/+");
-      Serial.println("Subscribed to v1/devices/me/rpc/request/+");
+        char message[length + 1];
+        memcpy(message, payload, length);
+        message[length] = '\0';
+        Serial.printf("Payload: %s\n", message);
 
-    } else {
-      Serial.print("failed, rc=");
-      Serial.print(client.state());
-      Serial.println(" try again in 5 seconds");
-      delay(5000);
-    }
-  }
-}
+        StaticJsonDocument<256> doc;
+        DeserializationError error = deserializeJson(doc, message);
 
+        if (error) {
+            Serial.println("deserializeJson() failed");
+            return;
+        }
 
-void callback(char* topic, byte* payload, unsigned int length) {
-  Serial.print("Message arrived [");
-  Serial.print(topic);
-  Serial.println("] ");
+        const char* method = doc["method"];
+        if (method != nullptr && strcmp(method, "setStateLED") == 0) {
+            const char* params = doc["params"];
+            if (params != nullptr && strcmp(params, "ON") == 0) {
+                Serial.println("Cloud ra lệnh: BẬT THIẾT BỊ (ON)");
+                
+                // TODO: BẠN CÓ THỂ ĐIỀU KHIỂN LED QUA act Ở ĐÂY
+                // Ví dụ: act->pixels->fill(act->pixels->Color(255, 255, 255));
+                //        act->pixels->show();
+                
+            } else {   
+                Serial.println("Cloud ra lệnh: TẮT THIẾT BỊ (OFF)");
+                
+                // TODO: TẮT LED QUA act
+                // Ví dụ: act->pixels->clear();
+                //        act->pixels->show();
+            }
+        }
+    });
 
-  // Allocate a temporary buffer for the message
-  char message[length + 1];
-  memcpy(message, payload, length);
-  message[length] = '\0';
-  Serial.print("Payload: ");
-  Serial.println(message);
+    // Biến lưu thời gian để gửi dữ liệu mỗi 10 giây
+    TickType_t last_publish_time = 0;
 
-  // Parse JSON
-  StaticJsonDocument<256> doc;
-  DeserializationError error = deserializeJson(doc, message);
-
-  if (error) {
-    Serial.print("deserializeJson() failed: ");
-    Serial.println(error.c_str());
-    return;
-  }
-
-  const char* method = doc["method"];
-  if (strcmp(method, "setStateLED") == 0) {
-    // Check params type (could be boolean, int, or string according to your RPC)
-    // Example: {"method": "setValueLED", "params": "ON"}
-    const char* params = doc["params"];
-
-    if (strcmp(params, "ON") == 0) {
-      Serial.println("Device turned ON.");
-      //TODO
-
-    } else {   
-      Serial.println("Device turned OFF.");
-      //TODO
-
-    }
-  } else {
-    Serial.print("Unknown method: ");
-    Serial.println(method);
-  }
-}
-
-
-void setup_coreiot(){
-
-  //Serial.print("Connecting to WiFi...");
-  //WiFi.begin(wifi_ssid, wifi_password);
-  //while (WiFi.status() != WL_CONNECTED) {
-  
-  // while (isWifiConnected == false) {
-  //   delay(500);
-  //   Serial.print(".");
-  // }
-
-  while(1){
-    if (xSemaphoreTake(xBinarySemaphoreInternet, portMAX_DELAY)) {
-      break;
-    }
-    delay(500);
-    Serial.print(".");
-  }
-
-
-  Serial.println(" Connected!");
-
-  client.setServer(CORE_IOT_SERVER.c_str(), CORE_IOT_PORT.toInt());
-  client.setCallback(callback);
-
-}
-
-void coreiot_task(void *pvParameters){
-
-    setup_coreiot();
-
-    while(1){
-
+    // =========================================================================
+    // 5. VÒNG LẶP CHÍNH CỦA TASK IOT
+    // =========================================================================
+    while(1) {
+        
+        // KIỂM TRA VÀ KẾT NỐI LẠI MQTT
         if (!client.connected()) {
-            reconnect();
-        }
-        client.loop();
+            Serial.print("[CoreIoT] Đang kết nối MQTT...");
+            String clientId = "ESP32Client-" + String(random(0xffff), HEX);
 
-        // Read sensor data via mutex-protected accessor (Task 3 integration)
-        SensorData_t sensorData;
-        if (sensorData_read(&sensorData)) {
-            String payload = "{\"temperature\":" + String(sensorData.temperature)
-                           + ",\"humidity\":"    + String(sensorData.humidity) + "}";
-            client.publish("v1/devices/me/telemetry", payload.c_str());
-            Serial.println("Published payload: " + payload);
-        } else {
-            Serial.println("[CoreIOT] WARNING: Could not read sensor data for MQTT publish.");
+            // Chú ý: Server thường yêu cầu Token làm Username
+            if (client.connect(clientId.c_str(), mqtt_token, NULL)) {
+                Serial.println("Thành công!");
+                client.subscribe("v1/devices/me/rpc/request/+"); // Đăng ký nhận lệnh
+            } else {
+                Serial.print("Thất bại, rc=");
+                Serial.print(client.state());
+                Serial.println(" - Thử lại sau 5s");
+                vTaskDelay(pdMS_TO_TICKS(5000));
+                continue; // Lỗi thì quay lại đầu vòng lặp
+            }
+        }
+        
+        // Lệnh sống còn: Giúp client duy trì kết nối và đọc tin nhắn Callback
+        client.loop(); 
+
+        // GỬI TELEMETRY MỖI 10 GIÂY (Không dùng Delay để tránh kẹt client.loop)
+        if ((xTaskGetTickCount() - last_publish_time) > pdMS_TO_TICKS(10000)) {
+            
+            float temp = 0.0;
+            float humi = 0.0;
+            bool has_data = false;
+
+            // Mở hộp lấy dữ liệu an toàn
+            if (act->xMutexSensorData != NULL) {
+                if (xSemaphoreTake(act->xMutexSensorData, portMAX_DELAY) == pdTRUE) {
+                    temp = act->sensorData.temperature;
+                    humi = act->sensorData.humidity;
+                    has_data = true;
+                    xSemaphoreGive(act->xMutexSensorData);
+                }
+            }
+
+            if (has_data) {
+                // Đóng gói JSON thủ công giống code của bạn
+                String payload = "{\"temperature\":" + String(temp) + ",\"humidity\":" + String(humi) + "}";
+                client.publish("v1/devices/me/telemetry", payload.c_str());
+                Serial.println("Đã gửi Cloud: " + payload);
+            } else {
+                Serial.println("[CoreIOT] WARNING: Không lấy được dữ liệu cảm biến.");
+            }
+
+            // Cập nhật lại thời gian vừa gửi
+            last_publish_time = xTaskGetTickCount();
         }
 
-        vTaskDelay(10000);  // Publish every 10 seconds
+        // Chạy vòng lặp rất nhanh để client.loop() luôn mượt mà (chỉ nghỉ 50ms)
+        vTaskDelay(pdMS_TO_TICKS(50)); 
     }
 }

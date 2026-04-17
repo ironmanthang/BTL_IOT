@@ -1,29 +1,28 @@
 #include "tinyml.h"
+#include "global.h" 
 
-// Globals, for the convenience of one-shot setup.
-namespace
-{
+namespace {
     tflite::ErrorReporter *error_reporter = nullptr;
     const tflite::Model *model = nullptr;
     tflite::MicroInterpreter *interpreter = nullptr;
     TfLiteTensor *input = nullptr;
     TfLiteTensor *output = nullptr;
-    constexpr int kTensorArenaSize = 8 * 1024; // Adjust size based on your model
+    constexpr int kTensorArenaSize = 8 * 1024; // Cẩn thận với bộ nhớ RAM trên ESP32
     uint8_t tensor_arena[kTensorArenaSize];
-} // namespace
+}
 
-void setupTinyML()
-{
+void tiny_ml_task(void *pvParameters) {
+    AppContext_t * act = (AppContext_t *)pvParameters;
+
     Serial.println("TensorFlow Lite Init....");
+    
     static tflite::MicroErrorReporter micro_error_reporter;
     error_reporter = &micro_error_reporter;
 
-    model = tflite::GetModel(dht_anomaly_model_tflite); // g_model_data is from model_data.h
-    if (model->version() != TFLITE_SCHEMA_VERSION)
-    {
-        error_reporter->Report("Model provided is schema version %d, not equal to supported version %d.",
-                               model->version(), TFLITE_SCHEMA_VERSION);
-        return;
+    model = tflite::GetModel(dht_anomaly_model_tflite); 
+    if (model->version() != TFLITE_SCHEMA_VERSION) {
+        error_reporter->Report("Model schema mismatch!");
+        vTaskDelete(NULL); // Dừng task nếu file model bị lỗi
     }
 
     static tflite::AllOpsResolver resolver;
@@ -31,99 +30,56 @@ void setupTinyML()
         model, resolver, tensor_arena, kTensorArenaSize, error_reporter);
     interpreter = &static_interpreter;
 
-    TfLiteStatus allocate_status = interpreter->AllocateTensors();
-    if (allocate_status != kTfLiteOk)
-    {
+    if (interpreter->AllocateTensors() != kTfLiteOk) {
         error_reporter->Report("AllocateTensors() failed");
-        return;
+        vTaskDelete(NULL);
     }
 
     input = interpreter->input(0);
     output = interpreter->output(0);
-
     Serial.println("TensorFlow Lite Micro initialized on ESP32.");
-}
+    // ========================================================
 
-void tiny_ml_task(void *pvParameters)
-{
 
-    setupTinyML();
+    while (1) {
+        float temp = 0.0;
+        float humi = 0.0;
+        bool data_ready = false;
 
-    while (1)
-    {
+        if (act->xMutexSensorData != NULL) {
+            if (xSemaphoreTake(act->xMutexSensorData, portMAX_DELAY) == pdTRUE) {
+                
+                temp = act->sensorData.temperature;
+                humi = act->sensorData.humidity;
+                
+                // Đảm bảo cảm biến đã đo được số liệu thực tế chứ không phải số 0 mặc định
+                if (temp > 0.0 && humi > 0.0) {
+                    data_ready = true;
+                }
+                
+                xSemaphoreGive(act->xMutexSensorData); // Nhớ trả chìa khóa
+            }
+        }
 
-        // Read sensor data via mutex-protected accessor (Task 3 integration)
-        SensorData_t sensorData;
-        if (!sensorData_read(&sensorData)) {
+        if (!data_ready) {
             Serial.println("[TinyML] WARNING: Could not read sensor data, skipping inference.");
-            vTaskDelay(1000);
-            continue;
+            vTaskDelay(pdMS_TO_TICKS(1000));
+            continue; 
         }
-        // Prepare input data from shared sensor struct
-        input->data.f[0] = sensorData.temperature;
-        input->data.f[1] = sensorData.humidity;
 
-        // Run inference
-        TfLiteStatus invoke_status = interpreter->Invoke();
-        if (invoke_status != kTfLiteOk)
-        {
+        input->data.f[0] = temp;
+        input->data.f[1] = humi;
+
+        if (interpreter->Invoke() != kTfLiteOk) {
             error_reporter->Report("Invoke failed");
-            return;
+            continue; // Lỗi thì thử lại ở vòng lặp sau thay vì văng luôn
         }
 
-        // Get and process output
         float result = output->data.f[0];
+        
         Serial.print("Inference result: ");
         Serial.println(result);
 
-        vTaskDelay(5000);
+        vTaskDelay(pdMS_TO_TICKS(5000));
     }
 }
-
-
-
-// #include "tinyml.h"
-
-// namespace {
-//     tflite::ErrorReporter* error_reporter = nullptr;
-//     const tflite::Model* model = nullptr;
-//     tflite::MicroInterpreter* interpreter = nullptr;
-//     TfLiteTensor* input = nullptr;
-//     TfLiteTensor* output = nullptr;
-//     constexpr int kTensorArenaSize = 10 * 1024;
-//     uint8_t tensor_arena[kTensorArenaSize];
-// }
-
-// void setupTinyML() {
-//     static tflite::MicroErrorReporter micro_error_reporter;
-//     error_reporter = &micro_error_reporter;
-
-//     model = tflite::GetModel(dht_anomaly_model_tflite);
-//     if (model->version() != TFLITE_SCHEMA_VERSION) return;
-
-//     static tflite::AllOpsResolver resolver;
-//     static tflite::MicroInterpreter static_interpreter(model, resolver, tensor_arena, kTensorArenaSize, error_reporter);
-//     interpreter = &static_interpreter;
-
-//     interpreter->AllocateTensors();
-//     input = interpreter->input(0);
-//     output = interpreter->output(0);
-// }
-
-// void tiny_ml_task(void *pvParameters) {
-//     setupTinyML();
-//     SensorData_t sensorData;
-
-//     while (1) {
-//         if (sensorData_read(&sensorData)) {
-//             input->data.f[0] = sensorData.temperature;
-//             input->data.f[1] = sensorData.humidity;
-
-//             if (interpreter->Invoke() == kTfLiteOk) {
-//                 float result = output->data.f[0];
-//                 Serial.printf("Inference: %.2f\n", result);
-//             }
-//         }
-//         vTaskDelay(pdMS_TO_TICKS(5000));
-//     }
-// }

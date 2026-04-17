@@ -1,16 +1,13 @@
 #include "temp_humi_monitor.h"
 
-
-extern DHT20 dht; 
-extern Adafruit_SSD1306 lcd;
-
 void temp_humi_monitor(void *pvParameters) {
+    AppContext_t * act = (AppContext_t*)pvParameters;
     DisplayState_t last_state = STATE_NORMAL;
 
     while(1) {
-        dht.read();
-        float temp = dht.getTemperature();
-        float humi = dht.getHumidity();
+        act->dht->read();
+        float temp = act->dht->getTemperature();
+        float humi = act->dht->getHumidity();
 
         DisplayState_t current_state = STATE_NORMAL;
         if (temp >= TEMP_CRITICAL_THRESHOLD || humi >= HUMI_CRITICAL_THRESHOLD) {
@@ -19,23 +16,32 @@ void temp_humi_monitor(void *pvParameters) {
             current_state = STATE_WARNING;
         }
 
-        sensorData_write(temp, humi, current_state);
+        // sensorData_write(temp, humi, current_state);
+
+        if (act->xMutexSensorData != NULL) {
+            if (xSemaphoreTake(act->xMutexSensorData, portMAX_DELAY) == pdTRUE) {
+                act->sensorData.temperature = temp;
+                act->sensorData.humidity = humi;
+                act->sensorData.state = current_state;
+                xSemaphoreGive(act->xMutexSensorData); // Ghi xong trả chìa khóa
+            }
+        }
 
         if (current_state != last_state) {
-            if(xSemaphoreStateChange != NULL) xSemaphoreGive(xSemaphoreStateChange);
-            if(xSemaphoreNeoChange != NULL)   xSemaphoreGive(xSemaphoreNeoChange);
+            if(act->xSemaphoreStateChange != NULL) xSemaphoreGive(act->xSemaphoreStateChange);
+            if(act->xSemaphoreNeoChange != NULL)   xSemaphoreGive(act->xSemaphoreNeoChange);
             last_state = current_state;
         }
 
-        lcd.clearDisplay();
+        act->lcd->clearDisplay();
 
-        lcd.setCursor(0, 0);
-        lcd.printf("T:%.1fC %s ", temp, current_state == STATE_CRITICAL ? "CRIT" : (current_state == STATE_WARNING ? "WARN" : "NORM"));
+        act->lcd->setCursor(0, 0);
+        act->lcd->printf("T:%.1fC %s ", temp, current_state == STATE_CRITICAL ? "CRIT" : (current_state == STATE_WARNING ? "WARN" : "NORM"));
         
-        lcd.setCursor(0, 16); 
-        lcd.printf("H:%.1f%%   ", humi);
+        act->lcd->setCursor(0, 16); 
+        act->lcd->printf("H:%.1f%%   ", humi);
 
-        lcd.display(); 
+        act->lcd->display(); 
 
         // Serial.print("nhiet do :");
         // Serial.print(temp);
