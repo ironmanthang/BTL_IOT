@@ -20,7 +20,7 @@ void coreiot_task(void *pvParameters) {
     PubSubClient client(espClient);
 
     // THÔNG SỐ SERVER (Bạn có thể đưa vào global.h nếu muốn, ở đây để nội bộ cho gọn)
-    const char* mqtt_server = "app.coreiot.io"; 
+    const char* mqtt_server = "125.212.240.243"; 
     const char* mqtt_token  = "7113embizkufhmz4qcff"; 
     const int   mqtt_port   = 1883;
 

@@ -25,6 +25,7 @@ void setup() {
     act -> xMutexSensorData      = xSemaphoreCreateMutex();
     act -> xSemaphoreStateChange = xSemaphoreCreateBinary();
     act -> xSemaphoreNeoChange   = xSemaphoreCreateBinary();
+    act->  xBinarySemaphoreInternet = xSemaphoreCreateBinary();
     act -> lcd = lcd;
     act -> dht = dht;
     act->pixels = myPixels;
@@ -49,12 +50,12 @@ void setup() {
     // xBinarySemaphoreInternet = xSemaphoreCreateBinary();
     
     // 4. Chạy Task
-    xTaskCreate(temp_humi_monitor, "Task_Sensor", 4096, (void*)act, 3, NULL);
-    xTaskCreate(led_blinky,        "Task_LED",    2048, (void*)act, 2, NULL);
-    xTaskCreate(neo_blinky,        "Task_Neo",    2048, (void*)act, 2, NULL);
-    xTaskCreate(tiny_ml_task,      "Task_AI",     8192, (void*)act, 2, NULL);
-    xTaskCreate(coreiot_task,        "Task_Coreiot", 10240, (void*)act, 2, NULL);
-    xTaskCreate(wifi_task, "Task_WiFi", 4096, (void*)act, 4, NULL);
+    xTaskCreate(temp_humi_monitor, "Task_Sensor",   4096, (void*)act, 3, NULL);
+    xTaskCreate(led_blinky,        "Task_LED",      2048, (void*)act, 2, NULL);
+    xTaskCreate(neo_blinky,        "Task_Neo",      2048, (void*)act, 2, NULL);
+    xTaskCreate(tiny_ml_task,      "Task_AI",       8192, (void*)act, 2, NULL);
+    xTaskCreate(coreiot_task,      "Task_Coreiot",  10240, (void*)act, 2, NULL);
+    xTaskCreate(wifi_task,         "Task_WiFi",     4096, (void*)act, 4, NULL);
 }
 
 void loop() {
