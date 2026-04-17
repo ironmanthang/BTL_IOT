@@ -13,7 +13,7 @@ DHT20 dht;
 void setup() {
     Serial.begin(115200);
 
-    Wire.begin(); 
+    Wire.begin(11,12); 
     // lcd.begin();
     // lcd.backlight();
     dht.begin();
