@@ -5,6 +5,7 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/semphr.h"
+#include <LiquidCrystal_I2C.h>
 
 // 1. Trạng thái hiển thị
 typedef enum {
