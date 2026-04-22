@@ -1,43 +1,45 @@
-#include <task_handler.h>
+#include "task_handler.h"
+#include <Adafruit_NeoPixel.h>
 
-void handleWebSocketMessage(String message)
-{
-    Serial.println(message);
+void handleWebSocketMessage(String message) {
+    Serial.println("📩 Web nhận: " + message);
     StaticJsonDocument<256> doc;
-
     DeserializationError error = deserializeJson(doc, message);
-    if (error)
-    {
+    
+    if (error) {
         Serial.println("❌ Lỗi parse JSON!");
         return;
     }
-    JsonObject value = doc["value"];
-    if (doc["page"] == "device")
-    {
-        if (!value.containsKey("gpio") || !value.containsKey("status"))
-        {
-            Serial.println("⚠️ JSON thiếu thông tin gpio hoặc status");
-            return;
-        }
 
+    JsonObject value = doc["value"];
+    if (doc["page"] == "device") {
         int gpio = value["gpio"];
         String status = value["status"].as<String>();
+        bool isOn = status.equalsIgnoreCase("ON");
 
-        Serial.printf("⚙️ Điều khiển GPIO %d → %s\n", gpio, status.c_str());
-        pinMode(gpio, OUTPUT);
-        if (status.equalsIgnoreCase("ON"))
-        {
-            digitalWrite(gpio, HIGH);
-            Serial.printf("🔆 GPIO %d ON\n", gpio);
-        }
-        else if (status.equalsIgnoreCase("OFF"))
-        {
-            digitalWrite(gpio, LOW);
-            Serial.printf("💤 GPIO %d OFF\n", gpio);
+        if (gpio == 45) {
+            // TẠO ĐỐI TƯỢNG CỤC BỘ BẰNG TỪ KHÓA STATIC
+            // Biến này bị nhốt hoàn toàn trong hàm này, không ai thấy được nó,
+            // đồng thời không dùng malloc nhiều lần gây tràn RAM.
+            static Adafruit_NeoPixel webPixels(1, 45, NEO_GRB + NEO_KHZ800);
+            webPixels.begin();
+            
+            if (isOn) {
+                webPixels.setPixelColor(0, webPixels.Color(0, 0, 255)); // Bật Xanh Dương
+            } else {
+                webPixels.setPixelColor(0, webPixels.Color(0, 0, 0));   // Tắt
+            }
+            webPixels.show();
+            Serial.printf("🌈 Đã điều khiển NeoPixel GPIO 45 thành %s\n", status.c_str());
+        } 
+        else {
+            // Logic cho Relay thường giữ nguyên
+            pinMode(gpio, OUTPUT);
+            digitalWrite(gpio, isOn ? HIGH : LOW);
+            Serial.printf("⚙️ GPIO %d -> %s\n", gpio, status.c_str());
         }
     }
-    else if (doc["page"] == "setting")
-    {
+    else if (doc["page"] == "setting") {
         String WIFI_SSID = doc["value"]["ssid"].as<String>();
         String WIFI_PASS = doc["value"]["password"].as<String>();
         String CORE_IOT_TOKEN = doc["value"]["token"].as<String>();
@@ -45,17 +47,6 @@ void handleWebSocketMessage(String message)
         String CORE_IOT_PORT = doc["value"]["port"].as<String>();
 
         Serial.println("📥 Nhận cấu hình từ WebSocket:");
-        Serial.println("SSID: " + WIFI_SSID);
-        Serial.println("PASS: " + WIFI_PASS);
-        Serial.println("TOKEN: " + CORE_IOT_TOKEN);
-        Serial.println("SERVER: " + CORE_IOT_SERVER);
-        Serial.println("PORT: " + CORE_IOT_PORT);
-
-        // 👉 Gọi hàm lưu cấu hình
         Save_info_File(WIFI_SSID, WIFI_PASS, CORE_IOT_TOKEN, CORE_IOT_SERVER, CORE_IOT_PORT);
-
-        // Phản hồi lại client (tùy chọn)
-        String msg = "{\"status\":\"ok\",\"page\":\"setting_saved\"}";
-        ws.textAll(msg);
     }
 }

@@ -9,6 +9,8 @@ void temp_humi_monitor(void *pvParameters) {
         float temp = act->dht->getTemperature();
         float humi = act->dht->getHumidity();
 
+        sensorData_write(temp, humi, STATE_NORMAL);
+
         DisplayState_t current_state = STATE_NORMAL;
         if (temp >= TEMP_CRITICAL_THRESHOLD || humi >= HUMI_CRITICAL_THRESHOLD) {
             current_state = STATE_CRITICAL;
@@ -16,7 +18,6 @@ void temp_humi_monitor(void *pvParameters) {
             current_state = STATE_WARNING;
         }
 
-        // sensorData_write(temp, humi, current_state);
 
         if (act->xMutexSensorData != NULL) {
             if (xSemaphoreTake(act->xMutexSensorData, portMAX_DELAY) == pdTRUE) {
