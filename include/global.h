@@ -18,6 +18,11 @@ typedef enum {
     STATE_CRITICAL = 2
 } DisplayState_t;
 
+typedef enum {
+    CONTROL_MODE_AUTO = 0,
+    CONTROL_MODE_MANUAL = 1
+} ControlMode_t;
+
 typedef struct {
     float          temperature; 
     float          humidity;     
@@ -50,7 +55,20 @@ extern String CORE_IOT_SERVER;
 extern String CORE_IOT_PORT;
 extern boolean isWifiConnected;
 
+extern volatile ControlMode_t gControlMode;
+extern volatile bool gLed1State;
+extern volatile bool gLed2State;
+extern volatile uint8_t gLed2R;
+extern volatile uint8_t gLed2G;
+extern volatile uint8_t gLed2B;
+
 bool sensorData_write(float temp, float humidity, DisplayState_t state);
 bool sensorData_read(SensorData_t *outData);
+void setControlMode(ControlMode_t mode);
+ControlMode_t getControlMode();
+void setLed1State(bool isOn);
+void setLed2State(bool isOn);
+void setLed2Color(uint8_t r, uint8_t g, uint8_t b);
+void getLightStates(bool *led1On, bool *led2On, uint8_t *r, uint8_t *g, uint8_t *b);
 
 #endif

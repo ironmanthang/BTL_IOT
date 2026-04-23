@@ -12,30 +12,40 @@ void neo_blinky(void *pvParameters) {
     act->pixels->begin();
     act->pixels->clear();
     act->pixels->show(); // Tắt hết LED lúc khởi động
+    setLed2Color(0, 0, 0);
 
     while(1) {
-        if (act->xSemaphoreNeoChange != NULL) {
-            if (xSemaphoreTake(act->xSemaphoreNeoChange, portMAX_DELAY) == pdTRUE) {
-                
-                // Mở Mutex lấy dữ liệu
-                if (act->xMutexSensorData != NULL) {
-                    if (xSemaphoreTake(act->xMutexSensorData, portMAX_DELAY) == pdTRUE) {
-                        current_state = act->sensorData.state;
-                        xSemaphoreGive(act->xMutexSensorData); 
-                    }
-                }
+        if (getControlMode() == CONTROL_MODE_MANUAL) {
+            vTaskDelay(pdMS_TO_TICKS(80));
+            continue;
+        }
 
-                // Đổi màu đèn. Lưu ý cách gọi hàm Color cũng dùng qua act->pixels
-                if (current_state == STATE_NORMAL) {
-                    act->pixels->setPixelColor(0, act->pixels->Color(0, 255, 0)); 
-                } else if (current_state == STATE_WARNING) {
-                    act->pixels->setPixelColor(0, act->pixels->Color(255, 255, 0)); 
-                } else if (current_state == STATE_CRITICAL) {
-                    act->pixels->setPixelColor(0, act->pixels->Color(255, 0, 0)); 
-                }
-                
-                act->pixels->show(); 
+        if (act->xSemaphoreNeoChange != NULL) {
+            xSemaphoreTake(act->xSemaphoreNeoChange, pdMS_TO_TICKS(200));
+        } else {
+            vTaskDelay(pdMS_TO_TICKS(200));
+        }
+
+        // Mở Mutex lấy dữ liệu
+        if (act->xMutexSensorData != NULL) {
+            if (xSemaphoreTake(act->xMutexSensorData, portMAX_DELAY) == pdTRUE) {
+                current_state = act->sensorData.state;
+                xSemaphoreGive(act->xMutexSensorData);
             }
         }
+
+        // Đổi màu đèn. Lưu ý cách gọi hàm Color cũng dùng qua act->pixels
+        if (current_state == STATE_NORMAL) {
+            act->pixels->setPixelColor(0, act->pixels->Color(0, 255, 0));
+            setLed2Color(0, 255, 0);
+        } else if (current_state == STATE_WARNING) {
+            act->pixels->setPixelColor(0, act->pixels->Color(255, 255, 0));
+            setLed2Color(255, 255, 0);
+        } else if (current_state == STATE_CRITICAL) {
+            act->pixels->setPixelColor(0, act->pixels->Color(255, 0, 0));
+            setLed2Color(255, 0, 0);
+        }
+
+        act->pixels->show();
     }
 }

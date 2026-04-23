@@ -2,12 +2,19 @@
 
 void led_blinky(void *pvParameters) {
     pinMode(LED_GPIO, OUTPUT);
+    digitalWrite(LED_GPIO, LOW);
+    setLed1State(false);
     DisplayState_t current_state = STATE_NORMAL;
     
     // 1. Nhận cái Hộp từ tham số
     AppContext_t * act = (AppContext_t *)pvParameters;
 
     while(1) {
+        if (getControlMode() == CONTROL_MODE_MANUAL) {
+            vTaskDelay(pdMS_TO_TICKS(80));
+            continue;
+        }
+
         if (act->xSemaphoreStateChange != NULL) {
             if (xSemaphoreTake(act->xSemaphoreStateChange, 0) == pdTRUE) {
                 
@@ -24,12 +31,17 @@ void led_blinky(void *pvParameters) {
 
         if (current_state == STATE_NORMAL) {
             digitalWrite(LED_GPIO, LOW);
+            setLed1State(false);
             vTaskDelay(pdMS_TO_TICKS(500)); 
         } else if (current_state == STATE_WARNING) {
-            digitalWrite(LED_GPIO, !digitalRead(LED_GPIO));
+            bool next = !digitalRead(LED_GPIO);
+            digitalWrite(LED_GPIO, next ? HIGH : LOW);
+            setLed1State(next);
             vTaskDelay(pdMS_TO_TICKS(1000)); 
         } else if (current_state == STATE_CRITICAL) {
-            digitalWrite(LED_GPIO, !digitalRead(LED_GPIO));
+            bool next = !digitalRead(LED_GPIO);
+            digitalWrite(LED_GPIO, next ? HIGH : LOW);
+            setLed1State(next);
             vTaskDelay(pdMS_TO_TICKS(200)); 
         }
     }

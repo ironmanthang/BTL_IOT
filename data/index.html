@@ -28,7 +28,6 @@
     <div class="nav-item active" onclick="showSection('home', event)">🏠 <span>Trang chủ</span></div>
     <div class="nav-item" onclick="showSection('device', event)">⚡ <span>Thiết bị</span></div>
     <div class="nav-item" onclick="showSection('info', event)">ℹ️ <span>Thông tin</span></div>
-    <div class="nav-item" onclick="showSection('settings', event)">⚙️ <span>Cài đặt</span></div>
   </div>
 
   <!-- Nội dung chính -->
@@ -57,91 +56,33 @@
     <!-- THIẾT BỊ -->
     <div id="device" class="section" style="display:none;">
       <header>
-        <h1>Điều khiển Relay</h1>
-        <p>Quản lý và điều khiển các relay được kết nối.</p>
+        <h1>Điều khiển thiết bị</h1>
+        <p>Điều khiển 2 thiết bị cố định và hiển thị trạng thái thời gian thực.</p>
       </header>
 
-      <div class="device-list" id="relayContainer"></div>
+      <div class="mode-panel" id="modePanel">
+        <div class="mode-panel-header">
+          <h3>Chế độ điều khiển</h3>
+          <span class="mode-value" id="modeValue">AUTO</span>
+        </div>
+        <p class="mode-hint" id="modeHint">Tự động theo cảm biến, khóa nút điều khiển tay.</p>
+        <div class="mode-actions">
+          <button type="button" id="btnAutoMode" class="mode-btn active">AUTO</button>
+          <button type="button" id="btnManualMode" class="mode-btn">MANUAL</button>
+        </div>
+      </div>
 
-      <button class="add-relay-btn" onclick="openAddRelayDialog()">
-        <i class="fa-solid fa-plus"></i>
-      </button>
+      <div class="device-list" id="relayContainer"></div>
     </div>
 
     <!-- THÔNG TIN -->
     <div id="info" class="section" style="display:none;">
       <header>
         <h1>Thông tin thiết bị</h1>
-        <p>Chi tiết hệ thống và firmware sẽ hiển thị tại đây.</p>
+        <p>Thông tin hệ thống được cập nhật theo thời gian thực.</p>
       </header>
-    </div>
-
-    <!-- CÀI ĐẶT -->
-    <div id="settings" class="section settings-section" style="display:none;">
-      <div class="settings-card">
-        <h2><i class="fa-solid fa-gear"></i> Cấu hình thiết bị</h2>
-        <p>Nhập thông tin Wi-Fi và kết nối Core IoT của bạn bên dưới.</p>
-
-        <form id="settingsForm">
-          <div class="input-group">
-            <i class="fa-solid fa-wifi"></i>
-            <input type="text" id="ssid" placeholder="Tên Wi-Fi (SSID)" required>
-          </div>
-
-          <div class="input-group">
-            <i class="fa-solid fa-lock"></i>
-            <input type="password" id="password" placeholder="Mật khẩu Wi-Fi" required>
-          </div>
-
-          <div class="input-group">
-            <i class="fa-solid fa-key"></i>
-            <input type="text" id="token" placeholder="Mã Token Core IoT" required>
-          </div>
-
-          <div class="input-group">
-            <i class="fa-solid fa-server"></i>
-            <input type="text" id="server" placeholder="Máy chủ Core IoT" required>
-          </div>
-
-          <div class="input-group">
-            <i class="fa-solid fa-plug"></i>
-            <input type="number" id="port" placeholder="Cổng Core IoT" required>
-          </div>
-
-          <button type="submit" class="btn-save">
-            <i class="fa-solid fa-floppy-disk"></i> Lưu cấu hình
-          </button>
-        </form>
-      </div>
-    </div>
-  </div>
-
-  <!-- HỘP THOẠI THÊM RELAY -->
-  <div id="addRelayDialog" class="dialog-overlay" style="display:none;">
-    <div class="dialog fade-in">
-      <h3><i class="fa-solid fa-plug"></i> Thêm relay mới</h3>
-      <p>Nhập tên relay và chân GPIO</p>
-      <div class="input-field">
-        <input type="text" id="relayName" placeholder="Tên relay">
-      </div>
-      <div class="input-field">
-        <input type="number" id="relayGPIO" placeholder="Chân GPIO">
-      </div>
-      <div class="dialog-buttons">
-        <button class="confirm" onclick="saveRelay()">Lưu</button>
-        <button class="cancel" onclick="closeAddRelayDialog()">Hủy</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- HỘP THOẠI XÓA -->
-  <div id="confirmDeleteDialog" class="dialog-overlay" style="display:none;">
-    <div class="dialog warning fade-in">
-      <h3>⚠️ Xác nhận xóa</h3>
-      <p>Bạn có chắc chắn muốn xóa relay này không?</p>
-      <div class="dialog-buttons">
-        <button class="danger" onclick="confirmDelete()">Xóa</button>
-        <button class="cancel" onclick="closeConfirmDelete()">Hủy</button>
+      <div class="info-grid" id="systemInfo">
+        <div class="info-loading">Đang tải thông tin...</div>
       </div>
     </div>
   </div>

@@ -1,4 +1,6 @@
 #include "task_webserver.h"
+#include "led_blinky.h"
+#include "neo_blinky.h"
 
 // ---------------------------------------------------------------------------
 // Task 4 — Web Server in Access Point Mode
@@ -145,11 +147,68 @@ void Webserver_reconnect()
             // sensorData_read() acquires xMutexSensorData with a 100ms timeout,
             // copies the shared SensorData_t struct, then releases the mutex.
             SensorData_t data;
-            if (sensorData_read(&data)) {
-                String payload = "{\"temp\":" + String(data.temperature)
-                               + ",\"hum\":"  + String(data.humidity) + "}";
-                Webserver_sendata(payload);
-            } else {
+            bool hasSensor = sensorData_read(&data);
+
+            bool led1On = false;
+            bool led2On = false;
+            uint8_t r = 0;
+            uint8_t g = 0;
+            uint8_t b = 0;
+            getLightStates(&led1On, &led2On, &r, &g, &b);
+
+            StaticJsonDocument<384> doc;
+            if (hasSensor) {
+                doc["temp"] = data.temperature;
+                doc["hum"] = data.humidity;
+            }
+
+            JsonObject control = doc.createNestedObject("control");
+            control["mode"] = (getControlMode() == CONTROL_MODE_MANUAL) ? "MANUAL" : "AUTO";
+
+            JsonObject led1 = control.createNestedObject("led1");
+            led1["gpio"] = LED_GPIO;
+            led1["status"] = led1On ? "ON" : "OFF";
+
+            JsonObject led2 = control.createNestedObject("led2");
+            led2["gpio"] = NEO_PIN;
+            led2["status"] = led2On ? "ON" : "OFF";
+
+            JsonObject color = led2.createNestedObject("color");
+            color["r"] = r;
+            color["g"] = g;
+            color["b"] = b;
+
+            // --- Real-time system info (purely dynamic, no hardcoded labels) ---
+            JsonObject sys = doc.createNestedObject("system");
+
+            // Chip info
+            String chipModel = ESP.getChipModel();
+            if (chipModel.length() > 0) {
+                sys["Chip"] = chipModel;
+                sys["Revision"] = String(ESP.getChipRevision());
+                sys["CPU"] = String(ESP.getCpuFreqMHz()) + " MHz";
+            }
+
+            // Memory info
+            sys["FreeHeap"] = String(ESP.getFreeHeap() / 1024.0, 1) + " KB";
+            sys["HeapSize"] = String(ESP.getHeapSize() / 1024.0, 1) + " KB";
+
+            // Network info
+            sys["IP"] = WiFi.localIP().toString();
+            sys["RSSI"] = String(WiFi.RSSI()) + " dBm";
+
+            // Uptime (millis -> human readable)
+            unsigned long uptimeSec = millis() / 1000;
+            unsigned long uptimeMin = uptimeSec / 60;
+            unsigned long uptimeHr = uptimeMin / 60;
+            String uptimeStr = String(uptimeHr) + "h " + String(uptimeMin % 60) + "m " + String(uptimeSec % 60) + "s";
+            sys["Uptime"] = uptimeStr;
+
+            String payload;
+            serializeJson(doc, payload);
+            Webserver_sendata(payload);
+
+            if (!hasSensor) {
                 Serial.println("[Webserver] WARNING: Could not read sensor data for broadcast.");
             }
         }
