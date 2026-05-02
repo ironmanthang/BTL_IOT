@@ -61,7 +61,6 @@ function onMessage(event) {
     try {
         payload = JSON.parse(event.data);
     } catch (err) {
-        // Vẫn xử lý được định dạng plain text: "LED is ON" / "LED is OFF".
         applyTextStatus(event.data);
         return;
     }
@@ -143,7 +142,6 @@ function applyTextStatus(rawText) {
 }
 
 function applyFlexibleRelayStatus(data) {
-    // Hỗ trợ nhiều định dạng: {gpio:48,status:"ON"}, {value:{...}}, {devices:[...]}, ...
     const candidates = collectCandidates(data);
     if (candidates.length === 0) return;
 
@@ -169,49 +167,30 @@ function collectCandidates(data) {
 
     list.push(data);
 
-    if (typeof data.value === "object" && data.value !== null) {
-        list.push(data.value);
-    }
-    if (Array.isArray(data.devices)) {
-        list.push(...data.devices);
-    }
-    if (Array.isArray(data.relays)) {
-        list.push(...data.relays);
-    }
-    if (Array.isArray(data.data)) {
-        list.push(...data.data);
-    }
+    if (typeof data.value === "object" && data.value !== null) list.push(data.value);
+    if (Array.isArray(data.devices)) list.push(...data.devices);
+    if (Array.isArray(data.relays)) list.push(...data.relays);
+    if (Array.isArray(data.data)) list.push(...data.data);
     if (typeof data.control === "object" && data.control !== null) {
         list.push(data.control);
-        if (typeof data.control.led1 === "object" && data.control.led1 !== null) {
-            list.push(data.control.led1);
-        }
-        if (typeof data.control.led2 === "object" && data.control.led2 !== null) {
-            list.push(data.control.led2);
-        }
+        if (typeof data.control.led1 === "object" && data.control.led1 !== null) list.push(data.control.led1);
+        if (typeof data.control.led2 === "object" && data.control.led2 !== null) list.push(data.control.led2);
     }
-
     return list;
 }
 
 function findRelay(entry) {
     const gpio = pickFirstNumber(entry, ["gpio", "pin"]);
-    if (gpio !== null) {
-        return DEVICE_CONFIG.find((d) => Number(d.gpio) === Number(gpio)) || null;
-    }
+    if (gpio !== null) return DEVICE_CONFIG.find((d) => Number(d.gpio) === Number(gpio)) || null;
 
     const id = pickFirstNumber(entry, ["id", "relay_id", "device_id"]);
-    if (id !== null) {
-        return DEVICE_CONFIG.find((d) => Number(d.id) === Number(id)) || null;
-    }
+    if (id !== null) return DEVICE_CONFIG.find((d) => Number(d.id) === Number(id)) || null;
 
     const name = pickFirstString(entry, ["name", "device", "label", "key"]);
     if (name) {
         const normalized = normalizeName(name);
         return DEVICE_CONFIG.find((d) => normalizeName(d.name) === normalized || normalizeName(d.key) === normalized) || null;
     }
-
-    // Không có thông tin map rõ ràng: fallback cho relay đang chờ phản hồi.
     return DEVICE_CONFIG.find((d) => d.pending) || null;
 }
 
@@ -244,31 +223,22 @@ function pickFirstString(obj, keys) {
 function pickFirstValue(obj, keys) {
     if (typeof obj !== "object" || obj === null) return undefined;
     for (const key of keys) {
-        if (Object.prototype.hasOwnProperty.call(obj, key)) {
-            return obj[key];
-        }
+        if (Object.prototype.hasOwnProperty.call(obj, key)) return obj[key];
     }
     return undefined;
 }
 
 function normalizeName(value) {
-    return String(value || "")
-        .toLowerCase()
-        .replace(/[^a-z0-9]/g, "");
+    return String(value || "").toLowerCase().replace(/[^a-z0-9]/g, "");
 }
 
 // ==================== UI NAVIGATION ====================
 function showSection(id, event) {
-    document.querySelectorAll(".section").forEach((sec) => {
-        sec.style.display = "none";
-    });
-
+    document.querySelectorAll(".section").forEach((sec) => sec.style.display = "none");
     const target = document.getElementById(id);
     if (target) target.style.display = "block";
 
-    document.querySelectorAll(".nav-item").forEach((item) => {
-        item.classList.remove("active");
-    });
+    document.querySelectorAll(".nav-item").forEach((item) => item.classList.remove("active"));
     event.currentTarget.classList.add("active");
 }
 
@@ -305,7 +275,7 @@ function initGauges() {
 function renderRelays() {
     const container = document.getElementById("relayContainer");
     container.innerHTML = "";
-        const isManual = currentControlMode === CONTROL_MODE.MANUAL;
+    const isManual = currentControlMode === CONTROL_MODE.MANUAL;
 
     DEVICE_CONFIG.forEach((relay) => {
         const card = document.createElement("div");
@@ -313,9 +283,9 @@ function renderRelays() {
 
         const statusText = relay.state ? "ĐANG BẬT" : "ĐANG TẮT";
         const actionText = relay.state ? "TẮT" : "BẬT";
-                const pendingText = isManual
-                        ? (relay.pending ? "Đang chờ thiết bị phản hồi..." : "Đồng bộ với phản hồi ESP32")
-                        : "Đang ở chế độ AUTO - khóa điều khiển tay";
+        const pendingText = isManual
+            ? (relay.pending ? "Đang chờ thiết bị phản hồi..." : "Đồng bộ với phản hồi ESP32")
+            : "Đang ở chế độ AUTO - khóa điều khiển tay";
 
         card.innerHTML = `
       <i class="fa-solid fa-lightbulb device-icon"></i>
@@ -363,12 +333,8 @@ function bindModeControls() {
     const btnAuto = document.getElementById("btnAutoMode");
     const btnManual = document.getElementById("btnManualMode");
 
-    if (btnAuto) {
-        btnAuto.addEventListener("click", () => setControlMode(CONTROL_MODE.AUTO));
-    }
-    if (btnManual) {
-        btnManual.addEventListener("click", () => setControlMode(CONTROL_MODE.MANUAL));
-    }
+    if (btnAuto) btnAuto.addEventListener("click", () => setControlMode(CONTROL_MODE.AUTO));
+    if (btnManual) btnManual.addEventListener("click", () => setControlMode(CONTROL_MODE.MANUAL));
 }
 
 function setControlMode(mode) {
@@ -378,10 +344,7 @@ function setControlMode(mode) {
     renderModeControls();
     renderRelays();
 
-    const payload = JSON.stringify({
-        page: "control",
-        value: { mode: mode }
-    });
+    const payload = JSON.stringify({ page: "control", value: { mode: mode } });
     sendData(payload);
 }
 
@@ -391,21 +354,16 @@ function renderModeControls() {
     const btnAuto = document.getElementById("btnAutoMode");
     const btnManual = document.getElementById("btnManualMode");
 
-    if (modeValue) {
-        modeValue.textContent = currentControlMode === CONTROL_MODE.MANUAL ? "MANUAL" : "AUTO";
-    }
-
-    if (modeHint) {
-        modeHint.textContent = currentControlMode === CONTROL_MODE.MANUAL
-            ? "Cho phép bật/tắt đèn từ giao diện web."
-            : "Tự động theo cảm biến, khóa nút điều khiển tay.";
-    }
+    if (modeValue) modeValue.textContent = currentControlMode === CONTROL_MODE.MANUAL ? "MANUAL" : "AUTO";
+    if (modeHint) modeHint.textContent = currentControlMode === CONTROL_MODE.MANUAL
+        ? "Cho phép bật/tắt đèn từ giao diện web."
+        : "Tự động theo cảm biến, khóa nút điều khiển tay.";
 
     if (btnAuto) btnAuto.classList.toggle("active", currentControlMode === CONTROL_MODE.AUTO);
     if (btnManual) btnManual.classList.toggle("active", currentControlMode === CONTROL_MODE.MANUAL);
 }
 
-// ==================== SYSTEM INFO (dynamic, auto-generated) ====================
+// ==================== SYSTEM INFO (dynamic) ====================
 function updateSystemInfo(payload) {
     const sys = (typeof payload === "object" && payload !== null) ? payload.system : null;
     if (!sys) return;
@@ -413,27 +371,21 @@ function updateSystemInfo(payload) {
     const container = document.getElementById("systemInfo");
     if (!container) return;
 
-    // Clear loading state on first valid data
-    if (container.querySelector(".info-loading")) {
-        container.innerHTML = "";
-    }
+    if (container.querySelector(".info-loading")) container.innerHTML = "";
 
-    // Loop through every key in sys — labels are generated from the key name itself
     Object.entries(sys).forEach(([key, rawValue]) => {
         const displayKey = key.replace(/([A-Z])/g, " $1").replace(/^./, (s) => s.toUpperCase());
         let formattedValue = rawValue;
 
-        // Format numbers (e.g. FreeHeap 125.4 -> "125.4 KB")
         const numVal = Number(rawValue);
         if (Number.isFinite(numVal)) {
             if (key.toLowerCase().includes("heap") && !key.toLowerCase().includes("size")) {
-                formattedValue = rawValue.toString(); // already in KB from server
+                formattedValue = rawValue.toString(); 
             } else if (key.toLowerCase() === "rssi") {
                 formattedValue = rawValue + " dBm";
             }
         }
 
-        // Use existing element if already rendered, otherwise create new one
         let item = container.querySelector(`[data-key="${key}"]`);
         if (!item) {
             item = document.createElement("div");
@@ -449,3 +401,31 @@ function updateSystemInfo(payload) {
         }
     });
 }
+
+// ==================== CÀI ĐẶT HỆ THỐNG ====================
+document.addEventListener("DOMContentLoaded", () => {
+    const settingsForm = document.getElementById("settingsForm");
+    if (settingsForm) {
+        settingsForm.addEventListener("submit", (e) => {
+            e.preventDefault();
+            
+            const ssid = document.getElementById("wifi_ssid").value;
+            const pass = document.getElementById("wifi_pass").value;
+            const server = document.getElementById("mqtt_server").value;
+            const token = document.getElementById("mqtt_token").value;
+            const port = document.getElementById("mqtt_port").value;
+            
+            // Đóng gói dữ liệu thành đường dẫn HTTP GET
+            const url = `/save_wifi?ssid=${encodeURIComponent(ssid)}&pass=${encodeURIComponent(pass)}&server=${encodeURIComponent(server)}&token=${encodeURIComponent(token)}&port=${encodeURIComponent(port)}`;
+
+            // Dùng fetch (HTTP GET) vượt tường lửa thay vì WebSocket
+            fetch(url)
+                .then(() => {
+                    alert("✅ Đã nạp cấu hình! Mạch ESP32 đang khởi động lại...");
+                })
+                .catch(() => {
+                    alert("✅ Đã nạp cấu hình! Điện thoại/PC sẽ mất kết nối do mạch đã khởi động lại.");
+                });
+        });
+    }
+});

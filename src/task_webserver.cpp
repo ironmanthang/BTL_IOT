@@ -37,7 +37,6 @@ void Webserver_sendata(String data)
     if (ws.count() > 0)
     {
         ws.textAll(data); // Gửi đến tất cả client đang kết nối
-        Serial.println("📤 Đã gửi dữ liệu qua WebSocket: " + data);
     }
     else
     {
@@ -93,16 +92,28 @@ void connnectWSV()
     ws.onEvent(onEvent);
     server.addHandler(&ws);
 
-    // Serve frontend files from LittleFS flash filesystem
-    server.on("/", HTTP_GET, [](AsyncWebServerRequest *request)
-              { request->send(LittleFS, "/index.html", "text/html"); });
-    server.on("/script.js", HTTP_GET, [](AsyncWebServerRequest *request)
-              { request->send(LittleFS, "/script.js", "application/javascript"); });
-    server.on("/styles.css", HTTP_GET, [](AsyncWebServerRequest *request)
-              { request->send(LittleFS, "/styles.css", "text/css"); });
+    server.on("/", HTTP_GET, [](AsyncWebServerRequest *request){ request->send(LittleFS, "/index.html", "text/html"); });
+    server.on("/script.js", HTTP_GET, [](AsyncWebServerRequest *request){ request->send(LittleFS, "/script.js", "application/javascript"); });
+    server.on("/styles.css", HTTP_GET, [](AsyncWebServerRequest *request){ request->send(LittleFS, "/styles.css", "text/css"); });
+
+    // ----- BỔ SUNG ĐOẠN NÀY ĐỂ HỨNG DỮ LIỆU QUA HTTP THAY VÌ WEBSOCKET -----
+    server.on("/save_wifi", HTTP_GET, [](AsyncWebServerRequest *request){
+        String ssid = request->hasParam("ssid") ? request->getParam("ssid")->value() : "";
+        String pass = request->hasParam("pass") ? request->getParam("pass")->value() : "";
+        String server_mqtt = request->hasParam("server") ? request->getParam("server")->value() : "";
+        String token = request->hasParam("token") ? request->getParam("token")->value() : "";
+        String port = request->hasParam("port") ? request->getParam("port")->value() : "1883";
+        
+        request->send(200, "text/plain", "OK");
+        
+        Serial.println("\n📥 Nhận cấu hình từ HTTP Web:");
+        // Hàm này sẽ tự động lưu thông tin vào LittleFS và khởi động lại ESP32
+        Save_info_File(ssid, pass, token, server_mqtt, port); 
+    });
+    // -----------------------------------------------------------------------
 
     server.begin();
-    ElegantOTA.begin(&server);  // Enable OTA update page at /update
+    ElegantOTA.begin(&server);  
     webserver_isrunning = true;
 }
 

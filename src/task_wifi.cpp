@@ -1,56 +1,49 @@
-#include "task_wifi.h" // Nhớ include thư viện <WiFi.h> trong file header này
+#include "task_wifi.h"
 #include "global.h"
+#include "task_check_info.h"
 
 void wifi_task(void *pvParameters) {
-    // 1. Nhận hộp tài nguyên
     AppContext_t * act = (AppContext_t *)pvParameters;
 
-    // Thay đổi tên WiFi của bạn ở đây (Hoặc có thể đưa vào AppContext_t ở main.cpp)
-    const char* ssid = "Hoang An";
-    const char* password = "hoangan27012016@";
+    // 1. Đọc cấu hình từ LittleFS (Đã lưu từ Web trước đó)
+    Load_info_File();
 
-    // Khởi tạo chế độ Trạm (Station - Kết nối vào Router)
-    WiFi.mode(WIFI_STA);
-    WiFi.begin(ssid, password);
-    
-    Serial.print("[WiFi Task] Đang kết nối đến ");
-    Serial.println(ssid);
+    // 2. Bật chế độ vừa phát (AP) vừa nhận (STA)
+    WiFi.mode(WIFI_AP_STA);
 
-    bool was_connected = false;
+    // 3. Nếu đã có cấu hình, thử kết nối
+    if (WIFI_SSID.length() > 0) {
+        Serial.print("[WiFi] Đang kết nối mạng: ");
+        Serial.println(WIFI_SSID);
+        WiFi.begin(WIFI_SSID.c_str(), WIFI_PASS.c_str());
+
+        int timeout = 0;
+        // Đợi tối đa 10 giây
+        while (WiFi.status() != WL_CONNECTED && timeout < 20) {
+            vTaskDelay(pdMS_TO_TICKS(500));
+            Serial.print(".");
+            timeout++;
+        }
+    }
+
+    // 4. Nếu không kết nối được (hoặc chưa cài đặt), bật AP
+    if (WiFi.status() != WL_CONNECTED) {
+        Serial.println("\n[WiFi] 🔴 Chuyển sang phát WiFi cấu hình (AP Mode)");
+        WiFi.softAP("YOLO_UNO_Config", "12345678"); 
+        Serial.print("[WiFi] Truy cập IP Web: ");
+        Serial.println(WiFi.softAPIP());
+    } else {
+        Serial.println("\n[WiFi] 🟢 KẾT NỐI THÀNH CÔNG!");
+        Serial.print("IP: ");
+        Serial.println(WiFi.localIP());
+        
+        // Mở khóa cho CoreIoT chạy
+        if (act->xBinarySemaphoreInternet != NULL) {
+            xSemaphoreGive(act->xBinarySemaphoreInternet);
+        }
+    }
 
     while(1) {
-        // CỔNG BẢO VỆ: Phải có WiFi và IP phải hợp lệ thì mới được chạy vào trong
-        if (WiFi.status() == WL_CONNECTED && WiFi.localIP().toString() != "0.0.0.0") {
-            
-            if (!was_connected) {
-                // In khung viền cho dễ nhìn
-                Serial.println("\n=======================================");
-                Serial.println("[WiFi Task] 🟢 ĐÃ CÓ INTERNET THỰC SỰ!");
-                Serial.print("[WiFi Task] 🌐 ĐỊA CHỈ IP LÀ: ");
-                Serial.println(WiFi.localIP());
-                Serial.println("=======================================\n");
-
-                // Ép máy tính in chữ ra màn hình ngay lập tức và bắt mạch "ngủ" 2 giây
-                Serial.flush();
-                vTaskDelay(pdMS_TO_TICKS(2000)); 
-
-                // Sau khi ngủ 2 giây xong mới mở khóa cho Task MQTT và AI chạy
-                if (act->xBinarySemaphoreInternet != NULL) {
-                    xSemaphoreGive(act->xBinarySemaphoreInternet);
-                }
-                was_connected = true;
-            }
-
-        } 
-        // NẾU RỚT MẠNG THÌ XỬ LÝ Ở ĐÂY
-        else {
-            if (was_connected) {
-                Serial.println("[WiFi Task] 🔴 MẤT IP/MẤT KẾT NỐI!");
-                was_connected = false;
-            }
-        }
-
-        // Vòng lặp nghỉ 2 giây rồi kiểm tra WiFi lại một lần
         vTaskDelay(pdMS_TO_TICKS(2000));
     }
 }

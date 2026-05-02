@@ -19,12 +19,8 @@ void coreiot_task(void *pvParameters) {
     WiFiClient espClient;
     PubSubClient client(espClient);
 
-    // THÔNG SỐ SERVER (Bạn có thể đưa vào global.h nếu muốn, ở đây để nội bộ cho gọn)
-    const char* mqtt_server = "125.212.240.243"; 
-    const char* mqtt_token  = "7113embizkufhmz4qcff"; 
-    const int   mqtt_port   = 1883;
-
-    client.setServer(mqtt_server, mqtt_port);
+    // [ĐÃ SỬA]: Sử dụng biến cấu hình tải từ LittleFS do giao diện Web nạp vào
+    client.setServer(CORE_IOT_SERVER.c_str(), CORE_IOT_PORT.toInt());
 
     // =========================================================================
     // 4. HÀM CALLBACK NHẬN LỆNH TỪ CLOUD (Dùng Lambda Function để bắt biến act)
@@ -51,16 +47,20 @@ void coreiot_task(void *pvParameters) {
             if (params != nullptr && strcmp(params, "ON") == 0) {
                 Serial.println("Cloud ra lệnh: BẬT THIẾT BỊ (ON)");
                 
-                // TODO: BẠN CÓ THỂ ĐIỀU KHIỂN LED QUA act Ở ĐÂY
-                // Ví dụ: act->pixels->fill(act->pixels->Color(255, 255, 255));
-                //        act->pixels->show();
+                // [ĐÃ SỬA TODO]: Điều khiển LED qua hàm toàn cục an toàn
+                setLed2Color(0, 0, 255); // Sáng màu xanh dương
+                if (act->xSemaphoreNeoChange != NULL) {
+                    xSemaphoreGive(act->xSemaphoreNeoChange);
+                }
                 
             } else {   
                 Serial.println("Cloud ra lệnh: TẮT THIẾT BỊ (OFF)");
                 
-                // TODO: TẮT LED QUA act
-                // Ví dụ: act->pixels->clear();
-                //        act->pixels->show();
+                // [ĐÃ SỬA TODO]: Tắt LED
+                setLed2Color(0, 0, 0); 
+                if (act->xSemaphoreNeoChange != NULL) {
+                    xSemaphoreGive(act->xSemaphoreNeoChange);
+                }
             }
         }
     });
@@ -78,8 +78,8 @@ void coreiot_task(void *pvParameters) {
             Serial.print("[CoreIoT] Đang kết nối MQTT...");
             String clientId = "ESP32Client-" + String(random(0xffff), HEX);
 
-            // Chú ý: Server thường yêu cầu Token làm Username
-            if (client.connect(clientId.c_str(), mqtt_token, NULL)) {
+            // [ĐÃ SỬA]: Dùng Token từ biến cấu hình Web nạp vào
+            if (client.connect(clientId.c_str(), CORE_IOT_TOKEN.c_str(), NULL)) {
                 Serial.println("Thành công!");
                 client.subscribe("v1/devices/me/rpc/request/+"); // Đăng ký nhận lệnh
             } else {

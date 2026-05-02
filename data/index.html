@@ -28,6 +28,7 @@
     <div class="nav-item active" onclick="showSection('home', event)">🏠 <span>Trang chủ</span></div>
     <div class="nav-item" onclick="showSection('device', event)">⚡ <span>Thiết bị</span></div>
     <div class="nav-item" onclick="showSection('info', event)">ℹ️ <span>Thông tin</span></div>
+    <div class="nav-item" onclick="showSection('settings', event)">⚙️ <span>Cài đặt</span></div>
   </div>
 
   <!-- Nội dung chính -->
@@ -85,6 +86,43 @@
         <div class="info-loading">Đang tải thông tin...</div>
       </div>
     </div>
+
+    <!-- CÀI ĐẶT -->
+    <div id="settings" class="section" style="display:none;">
+      <header>
+        <h1>Cài đặt hệ thống</h1>
+        <p>Cấu hình WiFi và kết nối Cloud (MQTT)</p>
+      </header>
+      <div class="settings-section">
+        <div class="settings-card">
+          <h2>Cấu hình kết nối</h2>
+          <form id="settingsForm">
+            <div class="input-group">
+              <i class="fa-solid fa-wifi"></i>
+              <input type="text" id="wifi_ssid" placeholder="Tên WiFi (SSID)" required>
+            </div>
+            <div class="input-group">
+              <i class="fa-solid fa-lock"></i>
+              <input type="password" id="wifi_pass" placeholder="Mật khẩu WiFi">
+            </div>
+            <div class="input-group">
+              <i class="fa-solid fa-server"></i>
+              <input type="text" id="mqtt_server" placeholder="MQTT Server (VD: app.coreiot.io)" required>
+            </div>
+            <div class="input-group">
+              <i class="fa-solid fa-key"></i>
+              <input type="text" id="mqtt_token" placeholder="MQTT Token" required>
+            </div>
+            <div class="input-group">
+              <i class="fa-solid fa-network-wired"></i>
+              <input type="text" id="mqtt_port" placeholder="MQTT Port" value="1883" required>
+            </div>
+            <button type="submit" class="btn-save">LƯU TÙY CHỌN & KHỞI ĐỘNG LẠI</button>
+          </form>
+        </div>
+      </div>
+    </div>
+
   </div>
 
   <!-- JS -->
