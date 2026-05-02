@@ -76,10 +76,18 @@ void tiny_ml_task(void *pvParameters) {
         }
 
         float result = output->data.f[0];
-        
         Serial.print("Inference result: ");
         Serial.println(result);
 
-        vTaskDelay(pdMS_TO_TICKS(5000));
+        sensorData_update_ai(result);
+
+        if (act->xMutexSensorData != NULL) {
+            if (xSemaphoreTake(act->xMutexSensorData, portMAX_DELAY) == pdTRUE) {
+                act->sensorData.ai_score = result;
+                xSemaphoreGive(act->xMutexSensorData); // Ghi xong trả chìa khóa
+            }
+        }
+
+        vTaskDelay(5000);
     }
 }

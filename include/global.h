@@ -11,7 +11,6 @@
 #include "DHT20.h"
 #include <Adafruit_NeoPixel.h>
 
-// 1. Trạng thái hiển thị
 typedef enum {
     STATE_NORMAL   = 0,
     STATE_WARNING  = 1,
@@ -26,26 +25,27 @@ typedef enum {
 typedef struct {
     float          temperature; 
     float          humidity;     
-    DisplayState_t state;        
+    DisplayState_t state;
+    float          ai_score;        
 } SensorData_t;
 
-// extern SemaphoreHandle_t xMutexSensorData;
-// extern SemaphoreHandle_t xSemaphoreStateChange; // Dành cho Task LED
-// extern SemaphoreHandle_t xSemaphoreNeoChange;   // Dành cho Task NeoPixel
-// extern SemaphoreHandle_t xBinarySemaphoreInternet; // Dành cho CoreIOT sau này
+// ĐÃ MỞ KHÓA COMMENT ĐỂ DÙNG CHUNG TOÀN HỆ THỐNG
+extern SemaphoreHandle_t xMutexSensorData;
+extern SemaphoreHandle_t xSemaphoreStateChange; 
+extern SemaphoreHandle_t xSemaphoreNeoChange;   
+extern SemaphoreHandle_t xBinarySemaphoreInternet; 
 
 typedef struct {
     SemaphoreHandle_t xMutexSensorData;
-    SemaphoreHandle_t xSemaphoreStateChange; // Dành cho Task LED
-    SemaphoreHandle_t xSemaphoreNeoChange;   // Dành cho Task NeoPixel
-    SemaphoreHandle_t xBinarySemaphoreInternet; // Dành cho CoreIOT sau này
+    SemaphoreHandle_t xSemaphoreStateChange; 
+    SemaphoreHandle_t xSemaphoreNeoChange;   
+    SemaphoreHandle_t xBinarySemaphoreInternet; 
     
     Adafruit_SSD1306 * lcd;
     DHT20 * dht ;
     Adafruit_NeoPixel* pixels;
 
     SensorData_t sensorData;
-
 } AppContext_t;
 
 extern String WIFI_SSID;
@@ -64,6 +64,7 @@ extern volatile uint8_t gLed2B;
 
 bool sensorData_write(float temp, float humidity, DisplayState_t state);
 bool sensorData_read(SensorData_t *outData);
+void sensorData_update_ai(float ai_score);
 void setControlMode(ControlMode_t mode);
 ControlMode_t getControlMode();
 void setLed1State(bool isOn);

@@ -123,6 +123,30 @@ function updateGauges(data) {
     if (hum !== null && gaugeHumi) {
         gaugeHumi.refresh(hum);
     }
+
+    // --- BỔ SUNG LOGIC HIỂN THỊ VÀ ĐỔI MÀU AI CHỈ VỚI VÀI DÒNG ---
+    if (data.ai !== undefined && data.ai !== null) {
+        let aiScore = parseFloat(data.ai);
+        let elValue = document.getElementById("ai_value");
+        let elStatus = document.getElementById("ai_status");
+
+        if (elValue && elStatus) {
+            elValue.innerText = aiScore.toFixed(2);
+
+            // Ngưỡng cảnh báo: Lớn hơn 0.6 là Bất thường
+            if (aiScore > 0.6) {
+                elStatus.innerText = "⚠️ BẤT THƯỜNG";
+                elStatus.style.color = "#ff879f";
+                elStatus.style.background = "rgba(171, 46, 82, 0.24)";
+                elValue.style.color = "#ff879f";
+            } else {
+                elStatus.innerText = "✅ BÌNH THƯỜNG";
+                elStatus.style.color = "#6ffdf0";
+                elStatus.style.background = "rgba(32, 144, 146, 0.24)";
+                elValue.style.color = "#2de2d2";
+            }
+        }
+    }
 }
 
 function applyTextStatus(rawText) {

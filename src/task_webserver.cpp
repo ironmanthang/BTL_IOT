@@ -167,10 +167,12 @@ void Webserver_reconnect()
             uint8_t b = 0;
             getLightStates(&led1On, &led2On, &r, &g, &b);
 
+
             StaticJsonDocument<384> doc;
             if (hasSensor) {
                 doc["temp"] = data.temperature;
                 doc["hum"] = data.humidity;
+                doc["ai"]   = data.ai_score;
             }
 
             JsonObject control = doc.createNestedObject("control");

@@ -48,6 +48,15 @@ bool sensorData_read(SensorData_t *outData) {
     return false;
 }
 
+void sensorData_update_ai(float ai_score) {
+    if (xMutexSensorData != NULL) {
+        if (xSemaphoreTake(xMutexSensorData, pdMS_TO_TICKS(100)) == pdTRUE) {
+            sharedSensorData.ai_score = ai_score; // Ghi cho Webserver đọc
+            xSemaphoreGive(xMutexSensorData);
+        }
+    }
+}
+
 void setControlMode(ControlMode_t mode) {
     gControlMode = mode;
 }
