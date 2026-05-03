@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Bảng điều khiển YOLO UNO</title>
+  <title>YOLO UNO Dashboard</title>
 
   <!-- CSS -->
   <link rel="stylesheet" href="styles.css">
@@ -19,16 +19,24 @@
 
   <!-- Thanh bên -->
   <div class="sidebar">
+    <!-- LOGO MỚI: Dùng Icon và CSS thay vì ảnh Base64 -->
     <div class="logo-container">
-      <img class="logo-img"
-        src="data:image/png;base64,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"
-        alt="Logo">
+      <div class="logo-icon"><i class="fa-solid fa-microchip"></i></div>
+      <div class="logo-text">YOLO<span>UNO</span></div>
     </div>
 
-    <div class="nav-item active" onclick="showSection('home', event)">🏠 <span>Trang chủ</span></div>
-    <div class="nav-item" onclick="showSection('device', event)">⚡ <span>Thiết bị</span></div>
-    <div class="nav-item" onclick="showSection('info', event)">ℹ️ <span>Thông tin</span></div>
-    <div class="nav-item" onclick="showSection('settings', event)">⚙️ <span>Cài đặt</span></div>
+    <div class="nav-item active" onclick="showSection('home', event)">
+      <i class="fa-solid fa-house"></i> <span>Trang chủ</span>
+    </div>
+    <div class="nav-item" onclick="showSection('device', event)">
+      <i class="fa-solid fa-bolt"></i> <span>Thiết bị</span>
+    </div>
+    <div class="nav-item" onclick="showSection('info', event)">
+      <i class="fa-solid fa-circle-info"></i> <span>Thông tin</span>
+    </div>
+    <div class="nav-item" onclick="showSection('settings', event)">
+      <i class="fa-solid fa-gear"></i> <span>Cài đặt</span>
+    </div>
   </div>
 
   <!-- Nội dung chính -->
@@ -38,26 +46,25 @@
     <div id="home" class="section fade-in">
       <header>
         <h1>Bảng điều khiển môi trường</h1>
-        <p>Giám sát nhiệt độ và độ ẩm theo thời gian thực</p>
+        <p>Giám sát thời gian thực với công nghệ AI Edge</p>
       </header>
 
       <div class="gauges-container">
         <div class="gauge-card">
-          <h2>🌡️ Nhiệt độ (°C)</h2>
-          <div id="gauge_temp"></div>
+          <h2><i class="fa-solid fa-temperature-half"></i> Nhiệt độ (°C)</h2>
+          <div id="gauge_temp" class="gauge-obj"></div>
         </div>
 
         <div class="gauge-card">
-          <h2>💧 Độ ẩm (%)</h2>
-          <div id="gauge_humi"></div>
+          <h2><i class="fa-solid fa-droplet"></i> Độ ẩm (%)</h2>
+          <div id="gauge_humi" class="gauge-obj"></div>
         </div>
 
-        <!-- THÊM MỚI: Khối hiển thị AI -->
-        <div class="gauge-card">
-          <h2>🤖 AI Anomaly</h2>
-          <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 260px;">
-            <div id="ai_value" style="font-size: 56px; font-weight: 700; color: #2de2d2; transition: color 0.3s ease;">0.00</div>
-            <div id="ai_status" style="font-size: 16px; font-weight: 600; color: #9ca7c2; margin-top: 20px; padding: 8px 18px; border-radius: 20px; background: rgba(255, 255, 255, 0.05); transition: all 0.3s ease;">Đang phân tích...</div>
+        <div class="gauge-card ai-card">
+          <h2><i class="fa-solid fa-robot"></i> AI Anomaly</h2>
+          <div class="ai-wrapper">
+            <div id="ai_value" class="ai-value">0.00</div>
+            <div id="ai_status" class="ai-status">Đang phân tích...</div>
           </div>
         </div>
       </div>
@@ -67,7 +74,7 @@
     <div id="device" class="section" style="display:none;">
       <header>
         <h1>Điều khiển thiết bị</h1>
-        <p>Điều khiển 2 thiết bị cố định và hiển thị trạng thái thời gian thực.</p>
+        <p>Kiểm soát linh hoạt trạng thái Relay và hệ thống chiếu sáng.</p>
       </header>
 
       <div class="mode-panel" id="modePanel">
@@ -88,11 +95,11 @@
     <!-- THÔNG TIN -->
     <div id="info" class="section" style="display:none;">
       <header>
-        <h1>Thông tin thiết bị</h1>
-        <p>Thông tin hệ thống được cập nhật theo thời gian thực.</p>
+        <h1>Thông tin hệ thống</h1>
+        <p>Giám sát tình trạng phần cứng và tài nguyên ESP32.</p>
       </header>
       <div class="info-grid" id="systemInfo">
-        <div class="info-loading">Đang tải thông tin...</div>
+        <div class="info-loading"><i class="fa-solid fa-spinner fa-spin"></i> Đang tải thông tin...</div>
       </div>
     </div>
 
@@ -100,11 +107,11 @@
     <div id="settings" class="section" style="display:none;">
       <header>
         <h1>Cài đặt hệ thống</h1>
-        <p>Cấu hình WiFi và kết nối Cloud (MQTT)</p>
+        <p>Cấu hình WiFi và thông số kết nối MQTT CoreIOT.</p>
       </header>
       <div class="settings-section">
         <div class="settings-card">
-          <h2>Cấu hình kết nối</h2>
+          <h2><i class="fa-solid fa-cloud-arrow-up"></i> Cấu hình kết nối</h2>
           <form id="settingsForm">
             <div class="input-group">
               <i class="fa-solid fa-wifi"></i>
@@ -126,7 +133,7 @@
               <i class="fa-solid fa-network-wired"></i>
               <input type="text" id="mqtt_port" placeholder="MQTT Port" value="1883" required>
             </div>
-            <button type="submit" class="btn-save">LƯU TÙY CHỌN & KHỞI ĐỘNG LẠI</button>
+            <button type="submit" class="btn-save"><i class="fa-solid fa-floppy-disk"></i> LƯU & KHỞI ĐỘNG LẠI</button>
           </form>
         </div>
       </div>

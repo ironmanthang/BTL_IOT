@@ -9,7 +9,8 @@ void temp_humi_monitor(void *pvParameters) {
         float temp = act->dht->getTemperature();
         float humi = act->dht->getHumidity();
 
-        sensorData_write(temp, humi, STATE_NORMAL);
+        // Đã thêm tham số 'act' vào đây
+        sensorData_write(act, temp, humi, STATE_NORMAL);
 
         DisplayState_t current_state = STATE_NORMAL;
         if (temp >= TEMP_CRITICAL_THRESHOLD || humi >= HUMI_CRITICAL_THRESHOLD) {
@@ -18,13 +19,12 @@ void temp_humi_monitor(void *pvParameters) {
             current_state = STATE_WARNING;
         }
 
-
         if (act->xMutexSensorData != NULL) {
             if (xSemaphoreTake(act->xMutexSensorData, portMAX_DELAY) == pdTRUE) {
                 act->sensorData.temperature = temp;
                 act->sensorData.humidity = humi;
                 act->sensorData.state = current_state;
-                xSemaphoreGive(act->xMutexSensorData); // Ghi xong trả chìa khóa
+                xSemaphoreGive(act->xMutexSensorData); 
             }
         }
 
@@ -43,10 +43,6 @@ void temp_humi_monitor(void *pvParameters) {
         act->lcd->printf("H:%.1f%%   ", humi);
 
         act->lcd->display(); 
-
-        // Serial.print("nhiet do :");
-        // Serial.print(temp);
-        // Serial.println(" C");
 
         vTaskDelay(pdMS_TO_TICKS(2000));
     }

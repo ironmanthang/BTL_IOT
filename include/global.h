@@ -29,47 +29,45 @@ typedef struct {
     float          ai_score;        
 } SensorData_t;
 
-// ĐÃ MỞ KHÓA COMMENT ĐỂ DÙNG CHUNG TOÀN HỆ THỐNG
-extern SemaphoreHandle_t xMutexSensorData;
-extern SemaphoreHandle_t xSemaphoreStateChange; 
-extern SemaphoreHandle_t xSemaphoreNeoChange;   
-extern SemaphoreHandle_t xBinarySemaphoreInternet; 
-
 typedef struct {
+    // Các con trỏ đồng bộ RTOS
     SemaphoreHandle_t xMutexSensorData;
     SemaphoreHandle_t xSemaphoreStateChange; 
     SemaphoreHandle_t xSemaphoreNeoChange;   
     SemaphoreHandle_t xBinarySemaphoreInternet; 
     
+    // Phần cứng
     Adafruit_SSD1306 * lcd;
-    DHT20 * dht ;
+    DHT20 * dht;
     Adafruit_NeoPixel* pixels;
 
+    // Dữ liệu chung
     SensorData_t sensorData;
+    portMUX_TYPE lightStateMux; 
+
+    // CHUYỂN TOÀN BỘ BIẾN TOÀN CỤC VÀO ĐÂY
+    String wifi_ssid;
+    String wifi_pass;
+    String core_iot_token;
+    String core_iot_server;
+    String core_iot_port;
+    
+    ControlMode_t controlMode;
+    bool led1State;
+    bool led2State;
+    uint8_t led2Color[3];
 } AppContext_t;
 
-extern String WIFI_SSID;
-extern String WIFI_PASS;
-extern String CORE_IOT_TOKEN;
-extern String CORE_IOT_SERVER;
-extern String CORE_IOT_PORT;
-extern boolean isWifiConnected;
+// Các hàm Helper (bắt buộc truyền act vào để xử lý)
+bool sensorData_write(AppContext_t *act, float temp, float humidity, DisplayState_t state);
+bool sensorData_read(AppContext_t *act, SensorData_t *outData);
+void sensorData_update_ai(AppContext_t *act, float ai_score);
 
-extern volatile ControlMode_t gControlMode;
-extern volatile bool gLed1State;
-extern volatile bool gLed2State;
-extern volatile uint8_t gLed2R;
-extern volatile uint8_t gLed2G;
-extern volatile uint8_t gLed2B;
-
-bool sensorData_write(float temp, float humidity, DisplayState_t state);
-bool sensorData_read(SensorData_t *outData);
-void sensorData_update_ai(float ai_score);
-void setControlMode(ControlMode_t mode);
-ControlMode_t getControlMode();
-void setLed1State(bool isOn);
-void setLed2State(bool isOn);
-void setLed2Color(uint8_t r, uint8_t g, uint8_t b);
-void getLightStates(bool *led1On, bool *led2On, uint8_t *r, uint8_t *g, uint8_t *b);
+void setControlMode(AppContext_t *act, ControlMode_t mode);
+ControlMode_t getControlMode(AppContext_t *act);
+void setLed1State(AppContext_t *act, bool isOn);
+void setLed2State(AppContext_t *act, bool isOn);
+void setLed2Color(AppContext_t *act, uint8_t r, uint8_t g, uint8_t b);
+void getLightStates(AppContext_t *act, bool *led1On, bool *led2On, uint8_t *r, uint8_t *g, uint8_t *b);
 
 #endif

@@ -1,82 +1,46 @@
 #include "task_check_info.h"
 
-void Load_info_File()
-{
+void Load_info_File(AppContext_t *act) {
   File file = LittleFS.open("/info.dat", "r");
-  if (!file)
-  {
-    return;
-  }
+  if (!file) return;
+
   DynamicJsonDocument doc(4096);
-  DeserializationError error = deserializeJson(doc, file);
-  if (error)
-  {
-    Serial.print(F("deserializeJson() failed: "));
-  }
-  else
-  {
-    WIFI_SSID = strdup(doc["WIFI_SSID"]);
-    WIFI_PASS = strdup(doc["WIFI_PASS"]);
-    CORE_IOT_TOKEN = strdup(doc["CORE_IOT_TOKEN"]);
-    CORE_IOT_SERVER = strdup(doc["CORE_IOT_SERVER"]);
-    CORE_IOT_PORT = strdup(doc["CORE_IOT_PORT"]);
+  if (!deserializeJson(doc, file)) {
+    act->wifi_ssid       = doc["WIFI_SSID"].as<String>();
+    act->wifi_pass       = doc["WIFI_PASS"].as<String>();
+    act->core_iot_token  = doc["CORE_IOT_TOKEN"].as<String>();
+    act->core_iot_server = doc["CORE_IOT_SERVER"].as<String>();
+    act->core_iot_port   = doc["CORE_IOT_PORT"].as<String>();
   }
   file.close();
 }
 
-void Delete_info_File()
-{
-  if (LittleFS.exists("/info.dat"))
-  {
+void Delete_info_File() {
+  if (LittleFS.exists("/info.dat")) {
     LittleFS.remove("/info.dat");
   }
   ESP.restart();
 }
 
-void Save_info_File(String wifi_ssid, String wifi_pass, String CORE_IOT_TOKEN, String CORE_IOT_SERVER, String CORE_IOT_PORT)
-{
-  Serial.println(wifi_ssid);
-  Serial.println(wifi_pass);
-
+void Save_info_File(String ssid, String pass, String token, String server, String port, AppContext_t *act) {
   DynamicJsonDocument doc(4096);
-  doc["WIFI_SSID"] = wifi_ssid;
-  doc["WIFI_PASS"] = wifi_pass;
-  doc["CORE_IOT_TOKEN"] = CORE_IOT_TOKEN;
-  doc["CORE_IOT_SERVER"] = CORE_IOT_SERVER;
-  doc["CORE_IOT_PORT"] = CORE_IOT_PORT;
+  doc["WIFI_SSID"]       = ssid;
+  doc["WIFI_PASS"]       = pass;
+  doc["CORE_IOT_TOKEN"]  = token;
+  doc["CORE_IOT_SERVER"] = server;
+  doc["CORE_IOT_PORT"]   = port;
+
+  // Cập nhật RAM ngay lập tức
+  act->wifi_ssid       = ssid;
+  act->wifi_pass       = pass;
+  act->core_iot_token  = token;
+  act->core_iot_server = server;
+  act->core_iot_port   = port;
 
   File configFile = LittleFS.open("/info.dat", "w");
-  if (configFile)
-  {
+  if (configFile) {
     serializeJson(doc, configFile);
     configFile.close();
   }
-  else
-  {
-    Serial.println("Unable to save the configuration.");
-  }
   ESP.restart();
-};
-
-bool check_info_File(bool check)
-{
-  if (!check)
-  {
-    if (!LittleFS.begin(true))
-    {
-      Serial.println("❌ Lỗi khởi động LittleFS!");
-      return false;
-    }
-    Load_info_File();
-  }
-  
-  if (WIFI_SSID.isEmpty() && WIFI_PASS.isEmpty())
-  {
-    if (!check)
-    {
-    //   startAP();
-    }
-    return false;
-  }
-  return true;
 }

@@ -1,9 +1,5 @@
 #include "coreiot.h"
-#include "global.h"
 #include "task_handler.h"
-#include <WiFiClient.h>
-#include <PubSubClient.h>
-#include <ArduinoJson.h>
 
 void coreiot_task(void *pvParameters) {
     AppContext_t * act = (AppContext_t *)pvParameters;
@@ -14,9 +10,11 @@ void coreiot_task(void *pvParameters) {
 
     WiFiClient espClient;
     PubSubClient client(espClient);
-    client.setServer(CORE_IOT_SERVER.c_str(), CORE_IOT_PORT.toInt());
+    
+    // Lấy thông tin Server và Port từ act thay vì gọi biến toàn cục
+    client.setServer(act->core_iot_server.c_str(), act->core_iot_port.toInt());
 
-    // Xử lý lệnh RPC từ ThingsBoard
+    // Capture Lambda: [act] để hàm vô danh nhận biết được con trỏ
     client.setCallback([act](char* topic, byte* payload, unsigned int length) {
         char message[length + 1];
         memcpy(message, payload, length);
@@ -29,22 +27,22 @@ void coreiot_task(void *pvParameters) {
         bool state = doc["params"].as<bool>(); 
 
         if (method != nullptr) {
-            setControlMode(CONTROL_MODE_MANUAL);
+            setControlMode(act, CONTROL_MODE_MANUAL);
 
             if (strcmp(method, "setLedSwitchValue") == 0) {
-                setLed1State(state); 
+                setLed1State(act, state); 
                 pinMode(48, OUTPUT); 
                 digitalWrite(48, state ? HIGH : LOW); 
             } 
             else if (strcmp(method, "setNeoSwitchValue") == 0) {
-                if (state) setLed2Color(0, 0, 255); 
-                else       setLed2Color(0, 0, 0);   
+                if (state) setLed2Color(act, 0, 0, 255); 
+                else       setLed2Color(act, 0, 0, 0);   
 
                 if (act->xSemaphoreNeoChange != NULL) {
                     xSemaphoreGive(act->xSemaphoreNeoChange);
                 }
             }
-            broadcastControlState("CLOUD_RPC_UPDATE");
+            broadcastControlState(act, "CLOUD_RPC_UPDATE");
         }
     });
 
@@ -53,7 +51,8 @@ void coreiot_task(void *pvParameters) {
     while(1) {
         if (!client.connected()) {
             String clientId = "ESP32Client-" + String(random(0xffff), HEX);
-            if (client.connect(clientId.c_str(), CORE_IOT_TOKEN.c_str(), NULL)) {
+            // Thay vì dùng CORE_IOT_TOKEN, dùng act->core_iot_token
+            if (client.connect(clientId.c_str(), act->core_iot_token.c_str(), NULL)) {
                 client.subscribe("v1/devices/me/rpc/request/+"); 
             } else {
                 vTaskDelay(pdMS_TO_TICKS(5000));
@@ -63,7 +62,6 @@ void coreiot_task(void *pvParameters) {
         
         client.loop(); 
 
-        // Gửi Telemetry mỗi 10 giây
         if ((xTaskGetTickCount() - last_publish_time) > pdMS_TO_TICKS(10000)) {
             float temp = 0.0, humi = 0.0;
             bool has_data = false;
