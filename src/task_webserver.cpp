@@ -64,7 +64,7 @@ void Webserver_reconnect(AppContext_t *act) {
             uint8_t r = 0, g = 0, b = 0;
             getLightStates(act, &led1On, &led2On, &r, &g, &b);
 
-            StaticJsonDocument<384> doc;
+            DynamicJsonDocument doc(1024);
             if (hasSensor) {
                 doc["temp"] = data.temperature;
                 doc["hum"]  = data.humidity;
@@ -85,9 +85,29 @@ void Webserver_reconnect(AppContext_t *act) {
             color["r"] = r; color["g"] = g; color["b"] = b;
 
             JsonObject sys = doc.createNestedObject("system");
+            
+            // 1. Thông tin bộ nhớ RAM
             sys["FreeHeap"] = String(ESP.getFreeHeap() / 1024.0, 1) + " KB";
-            sys["RSSI"] = String(WiFi.RSSI()) + " dBm";
-            sys["IP"] = WiFi.localIP().toString();
+            sys["TotalHeap"] = String(ESP.getHeapSize() / 1024.0, 1) + " KB";
+            
+            // 2. Thông tin mạng
+            sys["WifiSignal"] = String(WiFi.RSSI()) + " dBm";
+            sys["IpAddress"] = WiFi.localIP().toString();
+            sys["MacAddress"] = WiFi.macAddress();
+
+            // 3. Thông tin phần cứng vi điều khiển
+            String chipModel = ESP.getChipModel();
+            sys["ChipModel"] = chipModel + " (Rev " + String(ESP.getChipRevision()) + ")";
+            sys["CpuSpeed"] = String(ESP.getCpuFreqMHz()) + " MHz";
+
+            // 4. Thời gian đã chạy (Uptime) tính từ lúc cấp nguồn
+            unsigned long uptimeSec = millis() / 1000;
+            unsigned long h = uptimeSec / 3600;
+            unsigned long m = (uptimeSec % 3600) / 60;
+            unsigned long s = uptimeSec % 60;
+            char uptimeStr[20];
+            sprintf(uptimeStr, "%02luh %02lum %02lus", h, m, s);
+            sys["Uptime"] = String(uptimeStr);
 
             String payload;
             serializeJson(doc, payload);

@@ -65,7 +65,7 @@ void setup() {
     xTaskCreate(tiny_ml_task,      "Task_AI",       8192, (void*)act, 2, NULL);
     xTaskCreate(coreiot_task,      "Task_Coreiot",  8192, (void*)act, 2, NULL);
     xTaskCreate(wifi_task,         "Task_WiFi",     4096, (void*)act, 2, NULL);
-    xTaskCreate(Task_Toogle_BOOT,  "Task_Toogle",   2048, (void*)act, 2, NULL);
+    xTaskCreate(Task_Toogle_BOOT,  "Task_Toogle",   4096, (void*)act, 2, NULL);
 }
 
 void loop() {

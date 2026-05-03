@@ -16,9 +16,16 @@ void Load_info_File(AppContext_t *act) {
 }
 
 void Delete_info_File() {
-  if (LittleFS.exists("/info.dat")) {
-    LittleFS.remove("/info.dat");
-  }
+  Serial.println("🔄 Đang tiến hành tẩy xóa toàn bộ cấu hình...");
+  
+  LittleFS.remove("/info.dat");
+  
+  WiFi.disconnect(true, true); 
+  
+  Serial.println("✅ Đã xóa sạch! Mạch sẽ khởi động lại sau 1 giây...");
+  Serial.flush(); 
+  
+  delay(1000);
   ESP.restart();
 }
 

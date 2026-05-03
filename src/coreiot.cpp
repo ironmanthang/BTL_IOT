@@ -51,7 +51,6 @@ void coreiot_task(void *pvParameters) {
     while(1) {
         if (!client.connected()) {
             String clientId = "ESP32Client-" + String(random(0xffff), HEX);
-            // Thay vì dùng CORE_IOT_TOKEN, dùng act->core_iot_token
             if (client.connect(clientId.c_str(), act->core_iot_token.c_str(), NULL)) {
                 client.subscribe("v1/devices/me/rpc/request/+"); 
             } else {
